@@ -1,11 +1,12 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult, Uint128};
 use cw2::set_contract_version;
 
 use crate::error::ContractError;
 use crate::msg::{CountResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
-use crate::state::{State, STATE};
+use crate::querier;
+use crate::state::{State, Stats, STATE, STATS};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:pracwasm";
@@ -22,8 +23,14 @@ pub fn instantiate(
         count: msg.count,
         owner: info.sender.clone(),
     };
+
+    let stats = Stats {
+        claimed: msg.claimed,
+    };
+
     set_contract_version(deps.storage, CONTRACT_NAME, CONTRACT_VERSION)?;
     STATE.save(deps.storage, &state)?;
+    STATS.save(deps.storage, &stats)?;
 
     Ok(Response::new()
         .add_attribute("method", "instantiate")
@@ -41,6 +48,7 @@ pub fn execute(
     match msg {
         ExecuteMsg::Increment {} => try_increment(deps),
         ExecuteMsg::Reset { count } => try_reset(deps, info, count),
+        ExecuteMsg::Claim { token, amount } => try_claim(deps, info, token, amount),
     }
 }
 
@@ -61,6 +69,29 @@ pub fn try_reset(deps: DepsMut, info: MessageInfo, count: i32) -> Result<Respons
         Ok(state)
     })?;
     Ok(Response::new().add_attribute("method", "reset"))
+}
+
+pub fn try_claim(
+    deps: DepsMut,
+    _info: MessageInfo,
+    token: String,
+    amount: Uint128,
+) -> Result<Response, ContractError> {
+    let token_addr = deps.api.addr_validate(&token)?;
+
+    // validate balance
+    let balance = querier::query_token_balance(deps.as_ref(), token_addr)?;
+
+    if balance < amount {
+        return Err(ContractError::OutOfStock {});
+    }
+
+    STATS.update(deps.storage, |mut stats| -> Result<_, ContractError> {
+        stats.claimed = stats.claimed.saturating_add(amount);
+        Ok(stats)
+    })?;
+
+    Ok(Response::new().add_attribute("method", "claim"))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
