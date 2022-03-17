@@ -6,8 +6,8 @@ use cw_storage_plus::Item;
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct State {
-    pub count: i32,
     pub owner: Addr,
+    pub supply: Uint128,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -16,5 +16,4 @@ pub struct Stats {
 }
 
 pub const STATE: Item<State> = Item::new("state");
-
 pub const STATS: Item<Stats> = Item::new("stats");

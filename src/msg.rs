@@ -5,6 +5,9 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub claimed: Uint128,
+    pub token_name: String,
+    pub token_symbol: String,
+    pub cw20_code_id: u64,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
@@ -17,6 +20,7 @@ pub enum AssetInfo {
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     Claim { token: String, amount: Uint128 },
+    TopUp { token: String, amount: Uint128 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
