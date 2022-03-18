@@ -174,6 +174,32 @@ mod tests {
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
         assert_eq!(1, res.messages.len());
 
+        assert_eq!(
+            SubMsg {
+                msg: CosmosMsg::Wasm(WasmMsg::Instantiate {
+                    admin: None,
+                    code_id: 5,
+                    msg: to_binary(&cw20_base::msg::InstantiateMsg {
+                        name: "some token".to_string(),
+                        symbol: "some".to_string(),
+                        decimals: 6,
+                        initial_balances: vec![],
+                        mint: Some(MinterResponse {
+                            minter: mock_env().contract.address.to_string(),
+                            cap: None,
+                        }),
+                        marketing: None,
+                    }).unwrap(),
+                    funds: vec![],
+                    label: "BJ token".to_string(),
+                }),
+                id: 1,
+                gas_limit: None,
+                reply_on: ReplyOn::Success,
+            },
+            res.messages[0],
+        );
+
         // it worked, let's query the state
         let res = query(deps.as_ref(), mock_env(), QueryMsg::GetClaimed {}).unwrap();
         let value: ClaimedResponse = from_binary(&res).unwrap();
