@@ -1,11 +1,12 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
-    to_binary, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, ReplyOn, Response, StdResult,
-    SubMsg, Uint128, WasmMsg,
+    to_binary, Addr, Binary, CosmosMsg, Deps, DepsMut, Env, MessageInfo, Reply, ReplyOn, Response,
+    StdError, StdResult, SubMsg, Uint128, WasmMsg,
 };
 use cw2::set_contract_version;
 use cw20::{self, Cw20ExecuteMsg, MinterResponse};
+use cw_utils::parse_instantiate_response_data;
 
 use crate::error::ContractError;
 use crate::msg::{ClaimedResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
@@ -29,6 +30,7 @@ pub fn instantiate(
 
     let state = State {
         owner: info.sender.clone(),
+        token_address: Addr::unchecked(""),
         supply: Uint128::new(0),
     };
     STATE.save(deps.storage, &state)?;
@@ -67,6 +69,26 @@ pub fn instantiate(
         .add_attribute("method", "instantiate")
         .add_attribute("owner", info.sender)
         .add_attribute("claimed", msg.claimed.to_string()))
+}
+
+#[cfg_attr(not(feature = "library"), entry_point)]
+pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
+    let mut state: State = STATE.load(deps.storage)?;
+
+    let res = msg.result.unwrap();
+    let data =
+        parse_instantiate_response_data(res.data.unwrap_or_default().as_slice()).map_err(|_| {
+            StdError::parse_err("MsgInstantiateContractResponse", "failed to parse data")
+        })?;
+
+    if state.token_address != Addr::unchecked("") {
+        return Err(ContractError::Unauthorized {});
+    }
+
+    state.token_address = deps.api.addr_validate(&data.contract_address)?;
+    STATE.save(deps.storage, &state)?;
+
+    Ok(Response::new().add_attribute("token address", state.token_address))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
