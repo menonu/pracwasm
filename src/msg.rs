@@ -39,5 +39,5 @@ pub struct CountResponse {
 // We define a custom struct for each query response
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct ClaimedResponse {
-    pub claimed: Uint128
+    pub claimed: Uint128,
 }

@@ -189,7 +189,8 @@ mod tests {
                             cap: None,
                         }),
                         marketing: None,
-                    }).unwrap(),
+                    })
+                    .unwrap(),
                     funds: vec![],
                     label: "BJ token".to_string(),
                 }),
