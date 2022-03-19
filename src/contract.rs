@@ -99,18 +99,17 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Claim { token, amount } => try_claim(deps, info, token, amount),
-        ExecuteMsg::TopUp { token, amount } => try_topup(deps, info, token, amount),
+        ExecuteMsg::Claim { amount } => try_claim(deps, info, amount),
+        ExecuteMsg::TopUp { amount } => try_topup(deps, info, amount),
     }
 }
 
 pub fn try_claim(
     deps: DepsMut,
     _info: MessageInfo,
-    token: String,
     amount: Uint128,
 ) -> Result<Response, ContractError> {
-    let token_addr = deps.api.addr_validate(&token)?;
+    let token_addr = STATE.load(deps.storage)?.token_address;
 
     // validate balance
     let balance = querier::query_token_balance(deps.as_ref(), token_addr)?;
@@ -133,10 +132,9 @@ pub fn try_claim(
 pub fn try_topup(
     deps: DepsMut,
     info: MessageInfo,
-    token: String,
     amount: Uint128,
 ) -> Result<Response, ContractError> {
-    let addr = deps.api.addr_validate(&token)?;
+    let token_addr = STATE.load(deps.storage)?.token_address;
 
     STATE.update(deps.storage, |mut stats| -> Result<_, ContractError> {
         stats.supply = stats.supply.saturating_add(amount);
@@ -144,7 +142,7 @@ pub fn try_topup(
     })?;
 
     let msg: CosmosMsg = CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr: addr.to_string(),
+        contract_addr: token_addr.to_string(),
         msg: to_binary(&Cw20ExecuteMsg::Transfer {
             recipient: info.sender.to_string(),
             amount,
@@ -175,10 +173,41 @@ fn query_claimed(deps: Deps) -> StdResult<ClaimedResponse> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use cosmwasm_std::testing::{
-        mock_dependencies, mock_dependencies_with_balance, mock_env, mock_info,
+    use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
+    use cosmwasm_std::{
+        coins, from_binary, ReplyOn, SubMsg, SubMsgExecutionResponse, SubMsgResult,
     };
-    use cosmwasm_std::{coins, from_binary, ReplyOn, SubMsg};
+    use prost::Message;
+
+    #[derive(Clone, PartialEq, Message)]
+    struct MsgInstantiateContractResponse {
+        #[prost(string, tag = "1")]
+        pub contract_address: ::prost::alloc::string::String,
+        #[prost(bytes, tag = "2")]
+        pub data: ::prost::alloc::vec::Vec<u8>,
+    }
+
+    fn reply_token_address(deps: DepsMut, msg_id: u64, contract_address: String) {
+        let data = MsgInstantiateContractResponse {
+            contract_address,
+            data: vec![],
+        };
+
+        let mut encoded_instantiate_reply = Vec::<u8>::with_capacity(data.encoded_len());
+        // The data must encode successfully
+        data.encode(&mut encoded_instantiate_reply).unwrap();
+
+        // Build reply message
+        let msg = Reply {
+            id: msg_id,
+            result: SubMsgResult::Ok(SubMsgExecutionResponse {
+                events: vec![],
+                data: Some(encoded_instantiate_reply.into()),
+            }),
+        };
+
+        let _res = reply(deps, mock_env(), msg.clone()).unwrap();
+    }
 
     #[test]
     fn proper_initialization() {
@@ -241,18 +270,18 @@ mod tests {
         };
         let info = mock_info("someone", &coins(2, "token"));
         let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        let _ = reply_token_address(deps.as_mut(), 1, "asset0000".to_string());
 
         let info = mock_info("anyone", &[]);
         let msg = ExecuteMsg::Claim {
-            token: String::from("asset0000"),
             amount: Uint128::new(1),
         };
         let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap_err();
+
         assert_eq!(res, ContractError::OutOfStock {});
 
         let info = mock_info("anyone", &[]);
         let msg = ExecuteMsg::Claim {
-            token: String::from("asset0000"),
             amount: Uint128::new(0),
         };
         let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
@@ -273,10 +302,10 @@ mod tests {
         };
         let info = mock_info("someone", &coins(2, "token"));
         let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        let _ = reply_token_address(deps.as_mut(), 1, "asset0000".to_string());
 
         let info = mock_info("someone", &coins(2, "token"));
         let msg = ExecuteMsg::TopUp {
-            token: String::from("asset0000"),
             amount: Uint128::new(1000),
         };
         let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();

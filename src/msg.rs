@@ -19,8 +19,8 @@ pub enum AssetInfo {
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
-    Claim { token: String, amount: Uint128 },
-    TopUp { token: String, amount: Uint128 },
+    Claim { amount: Uint128 },
+    TopUp { amount: Uint128 },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

@@ -54,3 +54,4 @@ cw-utils = "0.13.0"
 [dev-dependencies]
 cosmwasm-schema = { version = "1.0.0-beta6" }
 cw-multi-test = "0.13"
+prost = "0.9"
