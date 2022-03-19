@@ -143,7 +143,7 @@ pub fn try_topup(
 
     let msg: CosmosMsg = CosmosMsg::Wasm(WasmMsg::Execute {
         contract_addr: token_addr.to_string(),
-        msg: to_binary(&Cw20ExecuteMsg::Transfer {
+        msg: to_binary(&Cw20ExecuteMsg::Mint {
             recipient: info.sender.to_string(),
             amount,
         })?,
@@ -318,7 +318,7 @@ mod tests {
             &SubMsg {
                 msg: CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: "asset0000".to_string(),
-                    msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                    msg: to_binary(&Cw20ExecuteMsg::Mint {
                         recipient: info.sender.to_string(),
                         amount: Uint128::new(1000),
                     })
