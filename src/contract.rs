@@ -94,25 +94,27 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Claim { amount } => try_claim(deps, info, amount),
-        ExecuteMsg::TopUp { amount } => try_topup(deps, info, amount),
+        ExecuteMsg::Claim { amount } => try_claim(deps, env, info, amount),
+        ExecuteMsg::TopUp { amount } => try_topup(deps, env, info, amount),
     }
 }
 
 pub fn try_claim(
     deps: DepsMut,
+    env: Env,
     _info: MessageInfo,
     amount: Uint128,
 ) -> Result<Response, ContractError> {
-    let token_addr = STATE.load(deps.storage)?.token_address;
+    let state = STATE.load(deps.storage)?;
 
     // validate balance
-    let balance = querier::query_token_balance(deps.as_ref(), token_addr)?;
+    let balance =
+        querier::query_token_balance(deps.as_ref(), state.token_address, env.contract.address)?;
 
     if balance < amount {
         return Err(ContractError::OutOfStock {});
@@ -131,10 +133,15 @@ pub fn try_claim(
 
 pub fn try_topup(
     deps: DepsMut,
+    env: Env,
     info: MessageInfo,
     amount: Uint128,
 ) -> Result<Response, ContractError> {
-    let token_addr = STATE.load(deps.storage)?.token_address;
+    let state = STATE.load(deps.storage)?;
+
+    if state.owner != info.sender {
+        return Err(ContractError::Unauthorized {});
+    }
 
     STATE.update(deps.storage, |mut stats| -> Result<_, ContractError> {
         stats.supply = stats.supply.saturating_add(amount);
@@ -142,9 +149,9 @@ pub fn try_topup(
     })?;
 
     let msg: CosmosMsg = CosmosMsg::Wasm(WasmMsg::Execute {
-        contract_addr: token_addr.to_string(),
+        contract_addr: state.token_address.to_string(),
         msg: to_binary(&Cw20ExecuteMsg::Mint {
-            recipient: info.sender.to_string(),
+            recipient: env.contract.address.to_string(),
             amount,
         })?,
         funds: vec![],
@@ -300,7 +307,7 @@ mod tests {
             token_symbol: "some".to_string(),
             cw20_code_id: 5,
         };
-        let info = mock_info("someone", &coins(2, "token"));
+        let info = mock_info("owner", &coins(2, "token"));
         let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
         let _ = reply_token_address(deps.as_mut(), 1, "asset0000".to_string());
 
@@ -308,11 +315,15 @@ mod tests {
         let msg = ExecuteMsg::TopUp {
             amount: Uint128::new(1000),
         };
+        let res = execute(deps.as_mut(), mock_env(), info, msg.clone()).unwrap_err();
+        assert_eq!(res, ContractError::Unauthorized {});
+
+        let info = mock_info("owner", &coins(2, "token"));
         let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
 
         let res_msg0 = res.messages.get(0).expect("no message");
 
-        let info = mock_info("someone", &coins(2, "token"));
+        let info = mock_info("owner", &coins(2, "token"));
         assert_eq!(
             res_msg0,
             &SubMsg {
