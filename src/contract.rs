@@ -179,12 +179,44 @@ fn query_claimed(deps: Deps) -> StdResult<ClaimedResponse> {
 
 #[cfg(test)]
 mod tests {
+    use std::collections::HashMap;
+    use std::marker::PhantomData;
+
+    use crate::mock_queries::{Cw20Balance, WasmMockQuerier};
+
     use super::*;
-    use cosmwasm_std::testing::{mock_dependencies_with_balance, mock_env, mock_info};
+    use cosmwasm_std::testing::{
+        mock_dependencies_with_balance, mock_env, mock_info, MockApi, MockStorage,
+    };
     use cosmwasm_std::{
-        coins, from_binary, ReplyOn, SubMsg, SubMsgExecutionResponse, SubMsgResult,
+        coins, from_binary, OwnedDeps, ReplyOn, SubMsg, SubMsgExecutionResponse, SubMsgResult,
     };
     use prost::Message;
+
+    struct DepBuilder {
+        cw20: Vec<Cw20Balance>,
+    }
+
+    impl DepBuilder {
+        pub fn new() -> Self {
+            Self { cw20: vec![] }
+        }
+
+        #[allow(dead_code)]
+        pub fn with_balances(&mut self, balance: Cw20Balance) -> &mut Self {
+            self.cw20.push(balance);
+            self
+        }
+
+        pub fn build(&self) -> OwnedDeps<MockStorage, MockApi, WasmMockQuerier> {
+            OwnedDeps {
+                storage: MockStorage::default(),
+                api: MockApi::default(),
+                querier: WasmMockQuerier::new(Some(&self.cw20)),
+                custom_query_type: PhantomData,
+            }
+        }
+    }
 
     #[derive(Clone, PartialEq, Message)]
     struct MsgInstantiateContractResponse {
@@ -267,7 +299,12 @@ mod tests {
 
     #[test]
     fn claim() {
-        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+        let mut deps = DepBuilder::new()
+            .with_balances(Cw20Balance {
+                contract_address: Addr::unchecked("asset0000"),
+                balances: HashMap::from([(mock_env().contract.address, Uint128::new(0))]),
+            })
+            .build();
 
         let msg = InstantiateMsg {
             claimed: Uint128::from(10u128),
@@ -323,14 +360,13 @@ mod tests {
 
         let res_msg0 = res.messages.get(0).expect("no message");
 
-        let info = mock_info("owner", &coins(2, "token"));
         assert_eq!(
             res_msg0,
             &SubMsg {
                 msg: CosmosMsg::Wasm(WasmMsg::Execute {
                     contract_addr: "asset0000".to_string(),
                     msg: to_binary(&Cw20ExecuteMsg::Mint {
-                        recipient: info.sender.to_string(),
+                        recipient: mock_env().contract.address.to_string(),
                         amount: Uint128::new(1000),
                     })
                     .unwrap(),
