@@ -1,5 +1,5 @@
 [package]
-name = "pracwasm"
+name = "bj-faucet"
 version = "0.1.0"
 authors = ["menonu <menonu3@beorc.info>"]
 edition = "2018"
