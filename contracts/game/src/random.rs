@@ -1,6 +1,6 @@
 use cosmwasm_std::Timestamp;
 
-use rand::{rngs::SmallRng, SeedableRng, RngCore};
+use rand::{rngs::SmallRng, RngCore, SeedableRng};
 
 // this is totally idiotic shit.
 // do not copy/use otherwise you will be hacked
