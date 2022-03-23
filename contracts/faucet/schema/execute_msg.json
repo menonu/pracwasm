@@ -11,15 +11,11 @@
         "claim": {
           "type": "object",
           "required": [
-            "amount",
-            "token"
+            "amount"
           ],
           "properties": {
             "amount": {
               "$ref": "#/definitions/Uint128"
-            },
-            "token": {
-              "type": "string"
             }
           }
         }
@@ -35,15 +31,11 @@
         "top_up": {
           "type": "object",
           "required": [
-            "amount",
-            "token"
+            "amount"
           ],
           "properties": {
             "amount": {
               "$ref": "#/definitions/Uint128"
-            },
-            "token": {
-              "type": "string"
             }
           }
         }

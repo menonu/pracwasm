@@ -4,7 +4,8 @@
   "type": "object",
   "required": [
     "owner",
-    "supply"
+    "supply",
+    "token_address"
   ],
   "properties": {
     "owner": {
@@ -12,6 +13,9 @@
     },
     "supply": {
       "$ref": "#/definitions/Uint128"
+    },
+    "token_address": {
+      "$ref": "#/definitions/Addr"
     }
   },
   "definitions": {
