@@ -6,6 +6,7 @@ use cw2::set_contract_version;
 use crate::error::ContractError;
 use crate::msg::{CountResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
 use crate::state::{State, STATE};
+use crate::random;
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:project-name";
@@ -34,19 +35,22 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    _env: Env,
+    env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
-        ExecuteMsg::Increment {} => try_increment(deps),
+        ExecuteMsg::Increment {} => try_increment(deps, env),
         ExecuteMsg::Reset { count } => try_reset(deps, info, count),
     }
 }
 
-pub fn try_increment(deps: DepsMut) -> Result<Response, ContractError> {
+pub fn try_increment(deps: DepsMut, env: Env) -> Result<Response, ContractError> {
+    let num = random::gen_random(env.block.time);
+    let num_mod10 = num % 10;
+
     STATE.update(deps.storage, |mut state| -> Result<_, ContractError> {
-        state.count += 1;
+        state.count += num_mod10 as i32;
         Ok(state)
     })?;
 
@@ -75,6 +79,7 @@ fn query_count(deps: Deps) -> StdResult<CountResponse> {
     let state = STATE.load(deps.storage)?;
     Ok(CountResponse { count: state.count })
 }
+
 
 #[cfg(test)]
 mod tests {

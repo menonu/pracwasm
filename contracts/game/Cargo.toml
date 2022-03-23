@@ -50,6 +50,8 @@ thiserror = { version = "1.0" }
 cw20 = "0.13"
 cw20-base = { version = "0.13.0", features = ["library"]}
 cw-utils = "0.13.0"
+getrandom = { version = "0.2", features = ["js"] }
+rand = { version = "0.8.5", features = ["small_rng"], default-features = false }
 
 [dev-dependencies]
 cosmwasm-schema = { version = "1.0.0-beta6" }
