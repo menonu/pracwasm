@@ -1,8 +1,8 @@
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-use cosmwasm_std::Addr;
-use cw_storage_plus::Item;
+use cosmwasm_std::{Addr, Uint128};
+use cw_storage_plus::{Item, Map};
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct State {
@@ -11,3 +11,17 @@ pub struct State {
 }
 
 pub const STATE: Item<State> = Item::new("state");
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct Vault {
+    pub balance: Uint128,
+}
+
+pub const VAULT: Map<&Addr, Vault> = Map::new("vault");
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct GameState {
+    _tmp: u8,
+}
+
+pub const GAMESTATE: Map<&Addr, GameState> = Map::new("gamestate");
