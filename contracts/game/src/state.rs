@@ -13,6 +13,13 @@ pub struct State {
 pub const STATE: Item<State> = Item::new("state");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct Config {
+    pub token_address: Addr,
+}
+
+pub const CONFIG: Item<Config> = Item::new("config");
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct Vault {
     pub balance: Uint128,
 }

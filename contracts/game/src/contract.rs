@@ -1,12 +1,18 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
-use cosmwasm_std::{to_binary, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult};
+use cosmwasm_std::{
+    from_binary, to_binary, Addr, BalanceResponse, Binary, Deps, DepsMut, Env, MessageInfo,
+    Response, StdError, StdResult, Uint128,
+};
 use cw2::set_contract_version;
+use cw20::Cw20ReceiveMsg;
 
 use crate::error::ContractError;
-use crate::msg::{CountResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::msg::{
+    CountResponse, Cw20HookMsg, DepositResponse, ExecuteMsg, InstantiateMsg, QueryMsg,
+};
 use crate::random;
-use crate::state::{State, STATE};
+use crate::state::{Config, State, Vault, CONFIG, STATE, VAULT};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:project-name";
@@ -40,8 +46,47 @@ pub fn execute(
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
     match msg {
+        ExecuteMsg::Receive(msg) => receive_cw20(deps, info, msg),
         ExecuteMsg::Increment {} => try_increment(deps, env),
         ExecuteMsg::Reset { count } => try_reset(deps, info, count),
+    }
+}
+
+pub fn receive_cw20(
+    deps: DepsMut,
+    info: MessageInfo,
+    cw20_msg: Cw20ReceiveMsg,
+) -> Result<Response, ContractError> {
+    let contract_address = info.sender;
+    match from_binary(&cw20_msg.msg) {
+        Ok(Cw20HookMsg::Deposit {}) => {
+            // validate cw20 contract
+            let config: Config = CONFIG.load(deps.storage)?;
+            if config.token_address != contract_address {
+                return Err(ContractError::Unauthorized {});
+            }
+
+            let transfer_amount = cw20_msg.amount;
+            let new_vault = VAULT.update(
+                deps.storage,
+                &Addr::unchecked(cw20_msg.sender),
+                |d: Option<Vault>| -> StdResult<Vault> {
+                    match d {
+                        Some(vault) => Ok(Vault {
+                            balance: vault.balance.saturating_add(transfer_amount),
+                        }),
+                        None => Ok(Vault {
+                            balance: transfer_amount,
+                        }),
+                    }
+                },
+            )?;
+
+            Ok(Response::new()
+                .add_attribute("action", "deposit")
+                .add_attribute("amount", new_vault.balance))
+        }
+        Err(err) => Err(ContractError::Std(err)),
     }
 }
 
@@ -72,12 +117,23 @@ pub fn try_reset(deps: DepsMut, info: MessageInfo, count: i32) -> Result<Respons
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetCount {} => to_binary(&query_count(deps)?),
+        QueryMsg::GetDeposit { address } => to_binary(&query_deposit(deps, address)?),
     }
 }
 
 fn query_count(deps: Deps) -> StdResult<CountResponse> {
     let state = STATE.load(deps.storage)?;
     Ok(CountResponse { count: state.count })
+}
+
+fn query_deposit(deps: Deps, address: String) -> StdResult<DepositResponse> {
+    let vault = VAULT.may_load(deps.storage, &Addr::unchecked(&address))?;
+    let deposit = if let Some(k) = vault {
+        k.balance
+    } else {
+        Uint128::new(0)
+    };
+    Ok(DepositResponse { address, deposit })
 }
 
 #[cfg(test)]
