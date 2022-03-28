@@ -9,6 +9,9 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
+    #[error("Invalid")]
+    InvalidState {},
+
     #[error("Custom Error val: {val:?}")]
     CustomError { val: String },
     // Add any other custom errors you like here.

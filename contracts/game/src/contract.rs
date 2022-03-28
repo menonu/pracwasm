@@ -12,7 +12,7 @@ use crate::msg::{
     CountResponse, Cw20HookMsg, DepositResponse, ExecuteMsg, InstantiateMsg, QueryMsg,
 };
 use crate::random;
-use crate::state::{Config, State, Vault, CONFIG, STATE, VAULT};
+use crate::state::{Config, GameState, State, Vault, CONFIG, GAMESTATE, STATE, VAULT};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:project-name";
@@ -49,6 +49,7 @@ pub fn execute(
         ExecuteMsg::Receive(msg) => receive_cw20(deps, info, msg),
         ExecuteMsg::Increment {} => try_increment(deps, env),
         ExecuteMsg::Reset { count } => try_reset(deps, info, count),
+        ExecuteMsg::Bet { amount } => try_bet(deps, info, amount),
     }
 }
 
@@ -111,6 +112,31 @@ pub fn try_reset(deps: DepsMut, info: MessageInfo, count: i32) -> Result<Respons
         Ok(state)
     })?;
     Ok(Response::new().add_attribute("method", "reset"))
+}
+
+/// User bet against the dealer.
+/// Fail if bet amount is bigger than deposit.
+///
+/// Gamestate is initialized here.
+pub fn try_bet(
+    deps: DepsMut,
+    info: MessageInfo,
+    amount: Uint128,
+) -> Result<Response, ContractError> {
+    let state_after = GAMESTATE.update(deps.storage, &info.sender, |state| match state {
+        Some(v) => {
+            if !v.ingame {
+                return Err(ContractError::InvalidState {});
+            }
+
+            Ok(GameState::new(amount))
+        }
+        None => Ok(GameState::new(amount)),
+    })?;
+
+    Ok(Response::new()
+        .add_attribute("action", "bet")
+        .add_attribute("amount", state_after.bet_amount))
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

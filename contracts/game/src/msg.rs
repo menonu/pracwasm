@@ -17,6 +17,9 @@ pub enum ExecuteMsg {
     },
     /// Receives a message of type [`Cw20ReceiveMsg`]
     Receive(Cw20ReceiveMsg),
+    Bet {
+        amount: Uint128,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

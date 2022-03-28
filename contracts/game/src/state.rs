@@ -28,7 +28,17 @@ pub const VAULT: Map<&Addr, Vault> = Map::new("vault");
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct GameState {
-    _tmp: u8,
+    pub ingame: bool,
+    pub bet_amount: Uint128,
+}
+
+impl GameState {
+    pub fn new(bet_amount: Uint128) -> Self {
+        GameState {
+            ingame: true,
+            bet_amount,
+        }
+    }
 }
 
 pub const GAMESTATE: Map<&Addr, GameState> = Map::new("gamestate");
