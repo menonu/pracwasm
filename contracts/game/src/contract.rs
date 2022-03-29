@@ -9,7 +9,8 @@ use cw20::Cw20ReceiveMsg;
 
 use crate::error::ContractError;
 use crate::msg::{
-    CountResponse, Cw20HookMsg, DepositResponse, ExecuteMsg, InstantiateMsg, QueryMsg,
+    ActionCommand, CountResponse, Cw20HookMsg, DepositResponse, ExecuteMsg, InstantiateMsg,
+    QueryMsg,
 };
 use crate::random;
 use crate::state::{Config, GameState, State, Vault, CONFIG, GAMESTATE, STATE, VAULT};
@@ -41,7 +42,7 @@ pub fn instantiate(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn execute(
     deps: DepsMut,
-    env: Env,
+    _env: Env,
     info: MessageInfo,
     msg: ExecuteMsg,
 ) -> Result<Response, ContractError> {
@@ -49,6 +50,7 @@ pub fn execute(
         ExecuteMsg::Receive(msg) => receive_cw20(deps, info, msg),
         ExecuteMsg::Reset { count } => try_reset(deps, info, count),
         ExecuteMsg::Bet { amount } => try_bet(deps, info, amount),
+        ExecuteMsg::Action { action } => try_action(deps, info, action),
     }
 }
 
@@ -104,7 +106,7 @@ pub fn try_reset(deps: DepsMut, info: MessageInfo, count: i32) -> Result<Respons
 /// User bet against the dealer.
 /// Fail if bet amount is bigger than deposit.
 ///
-/// Gamestate is initialized here.
+/// GameState is initialized here.
 pub fn try_bet(
     deps: DepsMut,
     info: MessageInfo,
@@ -124,6 +126,16 @@ pub fn try_bet(
     Ok(Response::new()
         .add_attribute("action", "bet")
         .add_attribute("amount", state_after.bet_amount))
+}
+
+pub fn try_action(
+    _deps: DepsMut,
+    _info: MessageInfo,
+    action: ActionCommand,
+) -> Result<Response, ContractError> {
+    println!("{:?}", action);
+
+    Ok(Response::new())
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]

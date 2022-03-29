@@ -10,6 +10,14 @@ pub struct InstantiateMsg {
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 #[serde(rename_all = "snake_case")]
+pub enum ActionCommand {
+    Stand,
+    Hit,
+    DoubleDown { amount: Uint128 },
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+#[serde(rename_all = "snake_case")]
 pub enum ExecuteMsg {
     Reset {
         count: i32,
@@ -18,6 +26,9 @@ pub enum ExecuteMsg {
     Receive(Cw20ReceiveMsg),
     Bet {
         amount: Uint128,
+    },
+    Action {
+        action: ActionCommand,
     },
 }
 
