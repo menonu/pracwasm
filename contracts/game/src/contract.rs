@@ -12,7 +12,7 @@ use crate::msg::{
     ActionCommand, CountResponse, Cw20HookMsg, DepositResponse, ExecuteMsg, InstantiateMsg,
     QueryMsg,
 };
-use crate::random;
+use crate::{random, game};
 use crate::state::{Config, GameState, State, Vault, CONFIG, GAMESTATE, STATE, VAULT};
 
 // version info for migration info
@@ -49,7 +49,7 @@ pub fn execute(
     match msg {
         ExecuteMsg::Receive(msg) => receive_cw20(deps, info, msg),
         ExecuteMsg::Reset { count } => try_reset(deps, info, count),
-        ExecuteMsg::Bet { amount } => try_bet(deps, info, amount),
+        ExecuteMsg::Bet { amount } => try_bet(deps, _env, info, amount),
         ExecuteMsg::Action { action } => try_action(deps, info, action),
     }
 }
@@ -104,11 +104,12 @@ pub fn try_reset(deps: DepsMut, info: MessageInfo, count: i32) -> Result<Respons
 }
 
 /// User bet against the dealer.
-/// Fail if bet amount is bigger than deposit.
+/// fail if bet amount is bigger than deposit.
 ///
-/// GameState is initialized here.
+/// The game starts here.
 pub fn try_bet(
     deps: DepsMut,
+    env: Env,
     info: MessageInfo,
     amount: Uint128,
 ) -> Result<Response, ContractError> {
@@ -118,14 +119,16 @@ pub fn try_bet(
                 return Err(ContractError::InvalidState {});
             }
 
-            Ok(GameState::new(amount))
+            Ok(GameState::new(amount, 0))
         }
-        None => Ok(GameState::new(amount)),
+        None => Ok(GameState::new(amount, 0)),
     })?;
+
+    let _card = game::draw_one(&mut random::gen_rng(env.block.time));
 
     Ok(Response::new()
         .add_attribute("action", "bet")
-        .add_attribute("amount", state_after.bet_amount))
+        .add_attribute("amount", state_after.total_bet_amount))
 }
 
 pub fn try_action(
