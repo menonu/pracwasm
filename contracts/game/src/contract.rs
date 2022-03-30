@@ -12,8 +12,8 @@ use crate::msg::{
     ActionCommand, CountResponse, Cw20HookMsg, DepositResponse, ExecuteMsg, InstantiateMsg,
     QueryMsg,
 };
-use crate::{random, game};
 use crate::state::{Config, GameState, State, Vault, CONFIG, GAMESTATE, STATE, VAULT};
+use crate::{game, random};
 
 // version info for migration info
 const CONTRACT_NAME: &str = "crates.io:project-name";
