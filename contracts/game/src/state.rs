@@ -4,6 +4,8 @@ use serde::{Deserialize, Serialize};
 use cosmwasm_std::{Addr, Uint128};
 use cw_storage_plus::{Item, Map};
 
+use crate::card::Hand;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct State {
     pub count: i32,
@@ -29,14 +31,18 @@ pub const VAULT: Map<&Addr, Vault> = Map::new("vault");
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct GameState {
     pub ingame: bool,
-    pub bet_amount: Uint128,
+    pub total_bet_amount: Uint128,
+    pub dealer_hand: Hand,
+    pub player_hand: Hand,
 }
 
 impl GameState {
-    pub fn new(bet_amount: Uint128) -> Self {
+    pub fn new(bet_amount: Uint128, _random_value: u32) -> Self {
         GameState {
             ingame: true,
-            bet_amount,
+            total_bet_amount: bet_amount,
+            dealer_hand: vec![],
+            player_hand: vec![],
         }
     }
 }
