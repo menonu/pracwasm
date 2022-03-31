@@ -2,14 +2,14 @@ use rand::prelude::SliceRandom;
 
 use crate::card::{BJCard, CARDLIST};
 
-pub fn draw_one<T: rand::Rng>(rng: &mut T) -> BJCard {
+pub(crate) fn draw_one<T: rand::Rng>(rng: &mut T) -> BJCard {
     CARDLIST
         .choose(rng)
         .expect("something went wrong")
         .to_owned()
 }
 
-pub fn calc_score(hand: &[BJCard]) -> i32 {
+pub(crate) fn calc_score(hand: &[BJCard]) -> i32 {
     let mut sum = 0;
     let mut hand = hand.to_owned();
     hand.sort();
