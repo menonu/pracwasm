@@ -1,6 +1,6 @@
 use rand::prelude::SliceRandom;
 
-use crate::card::{BJCard, CARDLIST};
+use crate::card::{BJCard, Hand, CARDLIST};
 
 pub(crate) fn draw_one<T: rand::Rng>(rng: &mut T) -> BJCard {
     CARDLIST
@@ -31,6 +31,35 @@ pub(crate) fn calc_score(hand: &[BJCard]) -> i32 {
         sum += score;
     }
     sum
+}
+
+pub(crate) enum Judge {
+    DealerBJ,
+    DealerBusted,
+    PlayerBJ,
+    PlayerBusted(i32),
+    Continue,
+}
+
+pub(crate) fn judge(dealer: &[BJCard], player: &[BJCard]) -> Judge {
+    let d_score = calc_score(dealer);
+    let p_score = calc_score(player);
+
+    match (d_score, p_score) {
+        (_, 21) => Judge::PlayerBJ,
+        (_, p) if p > 21 => Judge::PlayerBusted(p),
+        (21, _) => Judge::DealerBJ,
+        (d, _) if d > 21 => Judge::DealerBusted,
+        (_, _) => Judge::Continue,
+    }
+}
+
+pub(crate) fn first_deal<T: rand::Rng>(rng: &mut T) -> (Hand, Hand) {
+    let dealer = draw_one(rng);
+    let player1 = draw_one(rng);
+    let player2 = draw_one(rng);
+
+    (vec![dealer], vec![player1, player2])
 }
 
 #[cfg(test)]
@@ -72,5 +101,14 @@ mod tests {
 
         let hand = vec![BJCard::Ace, BJCard::Eight, BJCard::Four];
         assert_eq!(13, calc_score(&hand));
+    }
+
+    #[test]
+    fn test_first_deal() {
+        let mut rng = SmallRng::seed_from_u64(0_u64);
+        let (d, p) = first_deal(&mut rng);
+
+        dbg!(d);
+        dbg!(p);
     }
 }
