@@ -33,24 +33,36 @@ pub(crate) fn calc_score(hand: &[BJCard]) -> i32 {
     sum
 }
 
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) enum Judge {
-    DealerBJ,
-    DealerBusted,
-    PlayerBJ,
+    DealerBusted(i32),
     PlayerBusted(i32),
-    Continue,
+    DealerWin(i32, i32),
+    PlayerWin(i32, i32),
+    PlayerBJWin(i32, i32),
+    Draw(i32, i32),
 }
 
 pub(crate) fn judge(dealer: &[BJCard], player: &[BJCard]) -> Judge {
     let d_score = calc_score(dealer);
     let p_score = calc_score(player);
 
-    match (d_score, p_score) {
-        (_, 21) => Judge::PlayerBJ,
-        (_, p) if p > 21 => Judge::PlayerBusted(p),
-        (21, _) => Judge::DealerBJ,
-        (d, _) if d > 21 => Judge::DealerBusted,
-        (_, _) => Judge::Continue,
+    match (d_score, p_score, dealer.len(), player.len()) {
+        (21, 21, 2, 2) => Judge::Draw(21, 21),
+        (d, 21, _, 2) => Judge::PlayerBJWin(d, 21),
+        (21, p, 2, _) => Judge::DealerWin(21, p),
+        (_, p, _, _) if p > 21 => Judge::PlayerBusted(p),
+        (d, _, _, _) if d > 21 => Judge::DealerBusted(d),
+        (d, p, _, _) if d < p => Judge::PlayerWin(d, p),
+        (d, p, _, _) if d > p => Judge::DealerWin(d, p),
+        (d, p, _, _) if d == p => Judge::Draw(d, p),
+        (_, _, _, _) => panic!(
+            "Judge logic error: {} {} {} {}",
+            d_score,
+            p_score,
+            dealer.len(),
+            player.len()
+        ),
     }
 }
 
@@ -110,5 +122,49 @@ mod tests {
 
         dbg!(d);
         dbg!(p);
+    }
+
+    #[test]
+    fn judge_normal() {
+        use BJCard::*;
+        let dealer = vec![Ten, Eight];
+        let player = vec![Ten, Nine];
+        assert_eq!(Judge::PlayerWin(18, 19), judge(&dealer, &player));
+
+        let dealer = vec![Ten, Ten];
+        let player = vec![Ten, Nine];
+        assert_eq!(Judge::DealerWin(20, 19), judge(&dealer, &player));
+
+        let dealer = vec![Ten, Ten];
+        let player = vec![Ten, Jack];
+        assert_eq!(Judge::Draw(20, 20), judge(&dealer, &player));
+    }
+
+    #[test]
+    fn judge_busted() {
+        use BJCard::*;
+
+        let dealer = vec![Ten, Five, King];
+        let player = vec![Ten, Jack];
+        assert_eq!(Judge::DealerBusted(25), judge(&dealer, &player));
+        let dealer = vec![Ten, Two, Jack];
+        let player = vec![Ten, Jack];
+        assert_eq!(Judge::DealerBusted(22), judge(&dealer, &player));
+        let dealer = vec![Ten, Ten];
+        let player = vec![Ten, Two, Jack];
+        assert_eq!(Judge::PlayerBusted(22), judge(&dealer, &player));
+    }
+
+    #[test]
+    fn judge_blackjack() {
+        use BJCard::*;
+
+        let dealer = vec![Ten, Seven];
+        let player = vec![Ace, Jack];
+        assert_eq!(Judge::PlayerBJWin(17, 21), judge(&dealer, &player));
+
+        let dealer = vec![Ten, Five, Six];
+        let player = vec![Ace, Jack];
+        assert_eq!(Judge::PlayerBJWin(21, 21), judge(&dealer, &player));
     }
 }
