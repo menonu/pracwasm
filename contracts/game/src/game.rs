@@ -1,3 +1,4 @@
+use cw_utils::calc_range_start;
 use rand::prelude::SliceRandom;
 
 use crate::card::{BJCard, Hand, CARDLIST};
@@ -7,6 +8,18 @@ pub(crate) fn draw_one<T: rand::Rng>(rng: &mut T) -> BJCard {
         .choose(rng)
         .expect("something went wrong")
         .to_owned()
+}
+
+pub(crate) fn dealer_action<T: rand::Rng>(hand: &[BJCard], rng: &mut T) -> Vec<BJCard> {
+    let mut new_hand = Vec::from(hand);
+    let mut score = calc_score(hand);
+
+    while score < 17 {
+        new_hand.push(draw_one(rng));
+        score = calc_score(&new_hand);
+    }
+
+    new_hand
 }
 
 pub(crate) fn calc_score(hand: &[BJCard]) -> i32 {
@@ -122,6 +135,22 @@ mod tests {
 
         dbg!(d);
         dbg!(p);
+    }
+
+    #[test]
+    fn dealer_hand() {
+        use BJCard::*;
+        let mut rng = SmallRng::seed_from_u64(0_u64);
+
+        let dealer = vec![Two];
+        let dealer_new = dealer_action(&dealer, &mut rng);
+
+        assert!(calc_score(&dealer_new) > 16);
+
+        let dealer = vec![Three];
+        let dealer_new = dealer_action(&dealer, &mut rng);
+
+        assert!(calc_score(&dealer_new) > 16);
     }
 
     #[test]
