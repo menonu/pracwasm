@@ -167,4 +167,17 @@ mod tests {
         let player = vec![Ace, Jack];
         assert_eq!(Judge::PlayerBJWin(21, 21), judge(&dealer, &player));
     }
+
+    #[test]
+    fn judge_draw() {
+        use BJCard::*;
+
+        let dealer = vec![Ten, Seven];
+        let player = vec![Ten, Seven];
+        assert_eq!(Judge::Draw(17, 17), judge(&dealer, &player));
+
+        let dealer = vec![Ten, Ace];
+        let player = vec![Ten, Ace];
+        assert_eq!(Judge::Draw(21, 21), judge(&dealer, &player));
+    }
 }
