@@ -124,11 +124,16 @@ pub fn try_bet(
         None => Ok(GameState::new(amount, 0)),
     })?;
 
-    let _card = game::draw_one(&mut random::gen_rng(env.block.time));
+    let deal = game::first_deal(&mut random::gen_rng(env.block.time));
+
+    let hand_dealer: String = deal.0.iter().map(|c| c.to_string() + " ").collect();
+    let hand_player: String = deal.1.iter().map(|c| c.to_string() + " ").collect();
 
     Ok(Response::new()
         .add_attribute("action", "bet")
-        .add_attribute("amount", state_after.total_bet_amount))
+        .add_attribute("amount", state_after.total_bet_amount)
+        .add_attribute("dealer_cards", hand_dealer)
+        .add_attribute("player_cards", hand_player))
 }
 
 pub fn try_action(

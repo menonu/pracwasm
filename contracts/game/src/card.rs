@@ -1,8 +1,13 @@
+use std::fmt::Display;
+
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, JsonSchema)]
+#[derive(
+    Serialize, Deserialize, Copy, Clone, Debug, Eq, PartialEq, Ord, PartialOrd, JsonSchema,
+)]
 pub enum BJCard {
+    Ace,
     Two,
     Three,
     Four,
@@ -15,7 +20,12 @@ pub enum BJCard {
     Jack,
     Queeen,
     King,
-    Ace,
+}
+
+impl Display for BJCard {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", *self as u8)
+    }
 }
 
 pub type Hand = Vec<BJCard>;
