@@ -1,4 +1,4 @@
-use cosmwasm_std::StdError;
+use cosmwasm_std::{StdError, Uint128};
 use thiserror::Error;
 
 #[derive(Error, Debug)]
@@ -9,8 +9,14 @@ pub enum ContractError {
     #[error("Unauthorized")]
     Unauthorized {},
 
-    #[error("Invalid")]
+    #[error("Invalid State")]
     InvalidState {},
+
+    #[error("Bet amount must be >0")]
+    BetAmountZero {},
+
+    #[error("Balance is too low")]
+    ShortBalance { balance: Uint128 },
 
     #[error("Custom Error val: {val:?}")]
     CustomError { val: String },

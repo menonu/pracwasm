@@ -113,25 +113,49 @@ pub fn try_bet(
     info: MessageInfo,
     amount: Uint128,
 ) -> Result<Response, ContractError> {
-    let state_after = GAMESTATE.update(deps.storage, &info.sender, |state| match state {
-        Some(v) => {
-            if !v.ingame {
-                return Err(ContractError::InvalidState {});
+    if amount < Uint128::new(0) {
+        return Err(ContractError::BetAmountZero {});
+    }
+
+    let balance_after = VAULT.update(deps.storage, &info.sender, |vault| match vault {
+        Some(mut v) => {
+            if amount > v.balance {
+                return Err(ContractError::ShortBalance { balance: v.balance });
             }
 
-            Ok(GameState::new(amount, 0))
+            v.balance -= amount;
+            Ok(v)
         }
-        None => Ok(GameState::new(amount, 0)),
+        None => Err(ContractError::InvalidState {}),
     })?;
 
     let deal = game::first_deal(&mut random::gen_rng(env.block.time));
-
     let hand_dealer: String = deal.0.iter().map(|c| c.to_string() + " ").collect();
     let hand_player: String = deal.1.iter().map(|c| c.to_string() + " ").collect();
 
+    let state_after = GAMESTATE.update(deps.storage, &info.sender, |state| {
+        let new_game = GameState {
+            ingame: true,
+            total_bet_amount: amount,
+            dealer_hand: deal.0,
+            player_hand: deal.1,
+        };
+        match state {
+            Some(v) => {
+                if !v.ingame {
+                    return Err(ContractError::InvalidState {});
+                }
+
+                Ok(new_game)
+            }
+            None => Ok(new_game),
+        }
+    })?;
+
     Ok(Response::new()
         .add_attribute("action", "bet")
-        .add_attribute("amount", state_after.total_bet_amount)
+        .add_attribute("bet_amount", state_after.total_bet_amount)
+        .add_attribute("balance_after", balance_after.balance)
         .add_attribute("dealer_cards", hand_dealer)
         .add_attribute("player_cards", hand_player))
 }

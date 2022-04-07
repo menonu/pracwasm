@@ -36,15 +36,4 @@ pub struct GameState {
     pub player_hand: Hand,
 }
 
-impl GameState {
-    pub fn new(bet_amount: Uint128, _random_value: u32) -> Self {
-        GameState {
-            ingame: true,
-            total_bet_amount: bet_amount,
-            dealer_hand: vec![],
-            player_hand: vec![],
-        }
-    }
-}
-
 pub const GAMESTATE: Map<&Addr, GameState> = Map::new("gamestate");
