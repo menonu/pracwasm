@@ -1,4 +1,3 @@
-use cw_utils::calc_range_start;
 use rand::prelude::SliceRandom;
 
 use crate::card::{BJCard, Hand, CARDLIST};
@@ -130,11 +129,13 @@ mod tests {
 
     #[test]
     fn test_first_deal() {
+        use BJCard::*;
+
         let mut rng = SmallRng::seed_from_u64(0_u64);
         let (d, p) = first_deal(&mut rng);
 
-        dbg!(d);
-        dbg!(p);
+        assert_eq!(vec![Seven], d);
+        assert_eq!(vec![Ace, Eight], p);
     }
 
     #[test]
