@@ -241,8 +241,83 @@ mod tests {
             amount: Uint128::new(1000),
             msg: to_binary(&Cw20HookMsg::Deposit {}).unwrap(),
         });
-        let res = execute(deps.as_mut(), mock_env(), mock_info("token0000", &[]), msg).unwrap();
+        let _res = execute(deps.as_mut(), mock_env(), mock_info("token0000", &[]), msg).unwrap();
 
-        dbg!(res);
+        let msg = QueryMsg::GetDeposit {
+            address: "user0000".to_string(),
+        };
+        let query_deposit: DepositResponse =
+            from_binary(&query(deps.as_ref(), mock_env(), msg).unwrap()).unwrap();
+
+        assert_eq!(
+            DepositResponse {
+                address: "user0000".to_string(),
+                deposit: Uint128::new(1000)
+            },
+            query_deposit
+        );
+
+        // deposit again
+        let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+            sender: "user0000".to_string(),
+            amount: Uint128::new(1000),
+            msg: to_binary(&Cw20HookMsg::Deposit {}).unwrap(),
+        });
+        let _res = execute(deps.as_mut(), mock_env(), mock_info("token0000", &[]), msg).unwrap();
+        let msg = QueryMsg::GetDeposit {
+            address: "user0000".to_string(),
+        };
+        let query_deposit: DepositResponse =
+            from_binary(&query(deps.as_ref(), mock_env(), msg).unwrap()).unwrap();
+
+        assert_eq!(
+            DepositResponse {
+                address: "user0000".to_string(),
+                deposit: Uint128::new(2000)
+            },
+            query_deposit
+        );
+
+        let msg = QueryMsg::GetDeposit {
+            address: "other0000".to_string(),
+        };
+        let query_deposit: DepositResponse =
+            from_binary(&query(deps.as_ref(), mock_env(), msg).unwrap()).unwrap();
+        // non-existing user
+        assert_eq!(
+            DepositResponse {
+                address: "other0000".to_string(),
+                deposit: Uint128::new(0)
+            },
+            query_deposit
+        );
+    }
+
+    #[test]
+    fn bet() {
+        let mut deps = mock_dependencies();
+
+        let msg = InstantiateMsg {
+            cw20_address: "token0000".to_string(),
+        };
+        let info = mock_info("creator", &[]);
+        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        assert_eq!(0, res.messages.len());
+
+        // deposit
+        let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+            sender: "user0000".to_string(),
+            amount: Uint128::new(1000),
+            msg: to_binary(&Cw20HookMsg::Deposit {}).unwrap(),
+        });
+        let _res = execute(deps.as_mut(), mock_env(), mock_info("token0000", &[]), msg).unwrap();
+
+        // bet
+        let msg = ExecuteMsg::Bet {
+            amount: Uint128::new(100),
+        };
+        let _res = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap();
+
+        dbg!(_res);
     }
 }
