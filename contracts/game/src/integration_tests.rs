@@ -38,7 +38,9 @@ mod tests {
         let mut app = mock_app();
         let cw_template_id = app.store_code(contract_template());
 
-        let msg = InstantiateMsg { cw20_address: "token0000".to_string() };
+        let msg = InstantiateMsg {
+            cw20_address: "token0000".to_string(),
+        };
         let cw_template_contract_addr = app
             .instantiate_contract(
                 cw_template_id,
