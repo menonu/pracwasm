@@ -330,5 +330,32 @@ mod tests {
         };
         let res = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap_err();
         assert_eq!(ContractError::InvalidState {}, res);
+
+        // bet more than user's deposit is not allowed.
+        let mut deps = mock_dependencies();
+
+        let msg = InstantiateMsg {
+            cw20_address: "token0000".to_string(),
+        };
+        let info = mock_info("creator", &[]);
+        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+
+        let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+            sender: "user0000".to_string(),
+            amount: Uint128::new(1000),
+            msg: to_binary(&Cw20HookMsg::Deposit {}).unwrap(),
+        });
+        let _res = execute(deps.as_mut(), mock_env(), mock_info("token0000", &[]), msg).unwrap();
+
+        let msg = ExecuteMsg::Bet {
+            amount: Uint128::new(1001),
+        };
+        let res = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap_err();
+        assert_eq!(
+            ContractError::ShortBalance {
+                balance: Uint128::new(1000)
+            },
+            res
+        );
     }
 }
