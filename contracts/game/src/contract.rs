@@ -136,7 +136,7 @@ pub fn try_bet(
         };
         match state {
             Some(v) => {
-                if !v.ingame {
+                if v.ingame == true {
                     return Err(ContractError::InvalidState {});
                 }
 
@@ -317,7 +317,18 @@ mod tests {
             amount: Uint128::new(100),
         };
         let _res = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap();
+        let msg = QueryMsg::GetDeposit {
+            address: "user0000".to_string(),
+        };
+        let query_deposit: DepositResponse =
+            from_binary(&query(deps.as_ref(), mock_env(), msg).unwrap()).unwrap();
+        assert_eq!(Uint128::new(900), query_deposit.deposit);
 
-        dbg!(_res);
+        // bet is not allowed while in game
+        let msg = ExecuteMsg::Bet {
+            amount: Uint128::new(100),
+        };
+        let res = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap_err();
+        assert_eq!(ContractError::InvalidState {}, res);
     }
 }
