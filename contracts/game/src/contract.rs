@@ -2,7 +2,7 @@
 use cosmwasm_std::entry_point;
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
-    Uint128,
+    Storage, Uint128,
 };
 use cw2::set_contract_version;
 use cw20::Cw20ReceiveMsg;
@@ -111,17 +111,7 @@ pub fn try_bet(
         return Err(ContractError::BetAmountZero {});
     }
 
-    let balance_after = VAULT.update(deps.storage, &info.sender, |vault| match vault {
-        Some(mut v) => {
-            if amount > v.balance {
-                return Err(ContractError::ShortBalance { balance: v.balance });
-            }
-
-            v.balance -= amount;
-            Ok(v)
-        }
-        None => Err(ContractError::InvalidState {}),
-    })?;
+    let balance_after = exec_bet(deps.storage, &info, amount)?;
 
     let deal = game::first_deal(&mut random::gen_rng(env.block.time));
     let hand_dealer: String = deal.0.iter().map(|c| c.to_string() + " ").collect();
@@ -160,18 +150,84 @@ pub fn try_action(
     info: MessageInfo,
     action: ActionCommand,
 ) -> Result<Response, ContractError> {
-    println!("{:?}", action);
-
-    let game = GAMESTATE.load(deps.storage, &info.sender)?;
+    let mut game = GAMESTATE
+        .load(deps.storage, &info.sender)
+        .map_err(|_| ContractError::ActionBeforeBetError {})?;
 
     if game.ingame != true {
-        return Err(ContractError::InvalidState {});
+        return Err(ContractError::ActionBeforeBetError {});
     }
 
-    let _judge = game::judge(&game.dealer_hand, &game.player_hand);
+    match action {
+        ActionCommand::Hit => {
+            // draw one, continue game
+        }
+        ActionCommand::DoubleDown { amount } => {
+            // raise, draw one, then close game
+            if amount != game.total_bet_amount {
+                return Err(ContractError::WrongDoublDownAmount { amount });
+            }
 
-    let _d = dealer_action(&game.dealer_hand, &mut random::gen_rng(env.block.time));
-    Ok(Response::new())
+            let _ = exec_bet(deps.storage, &info, amount)?;
+
+            game.total_bet_amount += amount;
+            game.player_hand
+                .push(game::draw_one(&mut random::gen_rng(env.block.time)));
+        }
+        ActionCommand::Stand => {
+            // do nothing, close game
+        }
+    }
+
+    use game::{GameResult, Judge};
+
+    // dealer draw if player is not busted
+    let new_dealer_hand = if let Judge::PlayerBusted(_) = game::judge(&[], &game.player_hand) {
+        game.dealer_hand
+    } else {
+        dealer_action(&game.dealer_hand, &mut random::gen_rng(env.block.time))
+    };
+
+    let judge = game::judge(&new_dealer_hand, &game.player_hand);
+
+    let result = match judge {
+        Judge::DealerBusted(_) => GameResult::Win,
+        Judge::PlayerBusted(_) => GameResult::Loose,
+        Judge::DealerWin(_, _) => GameResult::Loose,
+        Judge::PlayerWin(_, _) => GameResult::Win,
+        Judge::PlayerBJWin(_, _) => GameResult::Win,
+        Judge::Draw(_, _) => GameResult::Draw,
+    };
+
+    game.ingame = false;
+    game.dealer_hand = new_dealer_hand;
+
+    GAMESTATE.save(deps.storage, &info.sender, &game)?;
+
+    Ok(Response::new()
+        .add_attribute("action", "action")
+        .add_attribute("state", "end")
+        .add_attribute("result", result.to_string())
+        .add_attribute("balance_change", String::from("0"))
+        .add_attribute("judge", judge.to_string()))
+}
+
+fn exec_bet(
+    storage: &mut dyn Storage,
+    info: &MessageInfo,
+    amount: Uint128,
+) -> Result<Vault, ContractError> {
+    VAULT.update(storage, &info.sender, |vault| match vault {
+        Some(mut v) => {
+            if amount > v.balance {
+                return Err(ContractError::ShortBalance { balance: v.balance });
+            }
+
+            v.balance -= amount;
+            Ok(v)
+        }
+        None => Err(ContractError::InvalidState {}),
+    })
 }
 
 #[cfg_attr(not(feature = "library"), entry_point)]
@@ -201,9 +257,31 @@ fn query_deposit(deps: Deps, address: String) -> StdResult<DepositResponse> {
 mod tests {
     use super::*;
     use cosmwasm_std::testing::{
-        mock_dependencies, mock_dependencies_with_balance, mock_env, mock_info,
+        mock_dependencies, mock_dependencies_with_balance, mock_env, mock_info, MockApi,
+        MockQuerier, MockStorage,
     };
-    use cosmwasm_std::{coins, from_binary};
+    use cosmwasm_std::{coins, from_binary, Empty, OwnedDeps};
+
+    fn init_with_balance() -> OwnedDeps<MockStorage, MockApi, MockQuerier, Empty> {
+        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+
+        let msg = InstantiateMsg {
+            cw20_address: "token0000".to_string(),
+        };
+        let info = mock_info("creator", &[]);
+        let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
+        assert_eq!(0, res.messages.len());
+
+        // deposit
+        let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
+            sender: "user0000".to_string(),
+            amount: Uint128::new(1000),
+            msg: to_binary(&Cw20HookMsg::Deposit {}).unwrap(),
+        });
+        let _res = execute(deps.as_mut(), mock_env(), mock_info("token0000", &[]), msg).unwrap();
+
+        deps
+    }
 
     #[test]
     fn proper_initialization() {
@@ -332,20 +410,7 @@ mod tests {
         assert_eq!(ContractError::InvalidState {}, res);
 
         // bet more than user's deposit is not allowed.
-        let mut deps = mock_dependencies();
-
-        let msg = InstantiateMsg {
-            cw20_address: "token0000".to_string(),
-        };
-        let info = mock_info("creator", &[]);
-        let _res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
-
-        let msg = ExecuteMsg::Receive(Cw20ReceiveMsg {
-            sender: "user0000".to_string(),
-            amount: Uint128::new(1000),
-            msg: to_binary(&Cw20HookMsg::Deposit {}).unwrap(),
-        });
-        let _res = execute(deps.as_mut(), mock_env(), mock_info("token0000", &[]), msg).unwrap();
+        let mut deps = init_with_balance();
 
         let msg = ExecuteMsg::Bet {
             amount: Uint128::new(1001),
@@ -357,5 +422,30 @@ mod tests {
             },
             res
         );
+    }
+
+    #[test]
+    fn action() {
+        let mut deps = init_with_balance();
+
+        // action before bet is not allowed
+        let msg = ExecuteMsg::Action {
+            action: ActionCommand::Stand,
+        };
+        let ret = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap_err();
+        assert_eq!(ContractError::ActionBeforeBetError {}, ret);
+
+        let msg = ExecuteMsg::Bet {
+            amount: Uint128::new(100),
+        };
+        let _ = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap();
+
+        // action before bet is not allowed
+        let msg = ExecuteMsg::Action {
+            action: ActionCommand::Stand,
+        };
+        let ret = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap();
+
+        dbg!(ret);
     }
 }

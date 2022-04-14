@@ -1,3 +1,5 @@
+use std::fmt::Display;
+
 use rand::prelude::SliceRandom;
 
 use crate::card::{BJCard, Hand, CARDLIST};
@@ -46,6 +48,27 @@ pub(crate) fn calc_score(hand: &[BJCard]) -> i32 {
 }
 
 #[derive(Debug, Clone, Eq, PartialEq)]
+pub(crate) enum GameResult {
+    Win,
+    Loose,
+    Draw,
+}
+
+impl Display for GameResult {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(
+            f,
+            "{}",
+            match self {
+                GameResult::Win => "Win",
+                GameResult::Loose => "Loose",
+                GameResult::Draw => "Draw",
+            }
+        )
+    }
+}
+
+#[derive(Debug, Clone, Eq, PartialEq)]
 pub(crate) enum Judge {
     DealerBusted(i32),
     PlayerBusted(i32),
@@ -53,6 +76,19 @@ pub(crate) enum Judge {
     PlayerWin(i32, i32),
     PlayerBJWin(i32, i32),
     Draw(i32, i32),
+}
+
+impl Display for Judge {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Judge::DealerBusted(d) => write!(f, "{} {}", "DealerBusted", d),
+            Judge::PlayerBusted(p) => write!(f, "{} {}", "PlayerBusted", p),
+            Judge::DealerWin(d, p) => write!(f, "{} {} {}", "DealerWin", d, p),
+            Judge::PlayerWin(d, p) => write!(f, "{} {} {}", "PlayerWin", d, p),
+            Judge::PlayerBJWin(d, p) => write!(f, "{} {} {}", "PlayerBJWin", d, p),
+            Judge::Draw(d, p) => write!(f, "{} {} {}", "Draw", d, p),
+        }
+    }
 }
 
 pub(crate) fn judge(dealer: &[BJCard], player: &[BJCard]) -> Judge {

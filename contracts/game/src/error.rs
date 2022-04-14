@@ -20,6 +20,12 @@ pub enum ContractError {
 
     #[error("Custom Error val: {val:?}")]
     CustomError { val: String },
+
+    #[error("Action before bet is not allowed")]
+    ActionBeforeBetError {},
+
+    #[error("Wrong double down amount")]
+    WrongDoublDownAmount { amount: Uint128 },
     // Add any other custom errors you like here.
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
 }
