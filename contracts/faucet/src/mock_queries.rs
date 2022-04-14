@@ -45,11 +45,9 @@ impl WasmQuerier {
             WasmQuery::Smart { contract_addr, msg } => self.dispatch(contract_addr, msg),
             WasmQuery::Raw { contract_addr, .. } => return_notfound(contract_addr),
             WasmQuery::ContractInfo { contract_addr, .. } => return_notfound(contract_addr),
-            _ => {
-                SystemResult::Err(SystemError::UnsupportedRequest {
-                    kind: "Unknown WasmQuery".to_string(),
-                })
-            }
+            _ => SystemResult::Err(SystemError::UnsupportedRequest {
+                kind: "Unknown WasmQuery".to_string(),
+            }),
         }
     }
 
