@@ -126,7 +126,7 @@ pub fn try_bet(
         };
         match state {
             Some(v) => {
-                if v.ingame == true {
+                if v.ingame {
                     return Err(ContractError::InvalidState {});
                 }
 
@@ -154,7 +154,7 @@ pub fn try_action(
         .load(deps.storage, &info.sender)
         .map_err(|_| ContractError::ActionBeforeBetError {})?;
 
-    if game.ingame != true {
+    if !game.ingame {
         return Err(ContractError::ActionBeforeBetError {});
     }
 

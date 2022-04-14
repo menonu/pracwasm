@@ -245,7 +245,7 @@ mod tests {
             }),
         };
 
-        let _res = reply(deps, mock_env(), msg.clone()).unwrap();
+        let _res = reply(deps, mock_env(), msg).unwrap();
     }
 
     #[test]

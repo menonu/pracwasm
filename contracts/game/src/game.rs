@@ -81,12 +81,12 @@ pub(crate) enum Judge {
 impl Display for Judge {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            Judge::DealerBusted(d) => write!(f, "{} {}", "DealerBusted", d),
-            Judge::PlayerBusted(p) => write!(f, "{} {}", "PlayerBusted", p),
-            Judge::DealerWin(d, p) => write!(f, "{} {} {}", "DealerWin", d, p),
-            Judge::PlayerWin(d, p) => write!(f, "{} {} {}", "PlayerWin", d, p),
-            Judge::PlayerBJWin(d, p) => write!(f, "{} {} {}", "PlayerBJWin", d, p),
-            Judge::Draw(d, p) => write!(f, "{} {} {}", "Draw", d, p),
+            Judge::DealerBusted(d) => write!(f, "DealerBusted {}", d),
+            Judge::PlayerBusted(p) => write!(f, "PlayerBusted {}", p),
+            Judge::DealerWin(d, p) => write!(f, "DealerWin {} {}", d, p),
+            Judge::PlayerWin(d, p) => write!(f, "PlayerWin {} {}", d, p),
+            Judge::PlayerBJWin(d, p) => write!(f, "PlayerBJWin {} {}", d, p),
+            Judge::Draw(d, p) => write!(f, "Draw {} {}", d, p),
         }
     }
 }

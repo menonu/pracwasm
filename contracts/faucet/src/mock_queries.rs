@@ -46,7 +46,7 @@ impl WasmQuerier {
             WasmQuery::Raw { contract_addr, .. } => return_notfound(contract_addr),
             WasmQuery::ContractInfo { contract_addr, .. } => return_notfound(contract_addr),
             _ => {
-                return SystemResult::Err(SystemError::UnsupportedRequest {
+                SystemResult::Err(SystemError::UnsupportedRequest {
                     kind: "Unknown WasmQuery".to_string(),
                 })
             }
@@ -54,7 +54,7 @@ impl WasmQuerier {
     }
 
     fn dispatch(&self, contract_address: &str, msg: &Binary) -> QuerierResult {
-        match from_binary(&msg).unwrap() {
+        match from_binary(msg).unwrap() {
             Cw20QueryMsg::Balance { address } => {
                 let balances: &HashMap<Addr, Uint128> =
                     match self.balances.get(&Addr::unchecked(contract_address)) {
