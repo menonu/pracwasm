@@ -24,11 +24,16 @@ pub enum BJCard {
 
 impl Display for BJCard {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", (*self as u8 + 1u8) % 13) // Card starts from two...ace
+        write!(f, "{}", (*self as u8 + 2u8) % 13) // Card starts from two...ace
     }
 }
 
 pub type Hand = Vec<BJCard>;
+
+pub fn hand_to_string(hand: &Hand) -> String {
+    let str: String = hand.iter().map(|c| c.to_string() + " ").collect();
+    format!("{}", str)
+}
 
 pub const CARDLIST: [BJCard; 13] = [
     BJCard::Two,
