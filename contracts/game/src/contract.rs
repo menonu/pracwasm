@@ -7,6 +7,7 @@ use cosmwasm_std::{
 use cw2::set_contract_version;
 use cw20::Cw20ReceiveMsg;
 
+use crate::card::hand_to_string;
 use crate::error::ContractError;
 use crate::game::dealer_action;
 use crate::msg::{
@@ -160,7 +161,20 @@ pub fn try_action(
 
     match action {
         ActionCommand::Hit => {
-            // draw one, continue game
+            game.player_hand
+                .push(game::draw_one(&mut random::gen_rng(env.block.time)));
+
+            // check busted or not
+            if let Judge::PlayerBusted(_) = game::judge(&[], &game.player_hand) {
+                // continue
+            } else {
+                GAMESTATE.save(deps.storage, &info.sender, &game)?;
+
+                return Ok(Response::new()
+                    .add_attribute("action", "hit")
+                    .add_attribute("dealer_cards", hand_to_string(&game.dealer_hand))
+                    .add_attribute("player_cards", hand_to_string(&game.player_hand)));
+            }
         }
         ActionCommand::DoubleDown { amount } => {
             // raise, draw one, then close game
@@ -255,6 +269,9 @@ fn query_deposit(deps: Deps, address: String) -> StdResult<DepositResponse> {
 
 #[cfg(test)]
 mod tests {
+    use crate::card::Hand;
+    use crate::card::BJCard::*;
+
     use super::*;
     use cosmwasm_std::testing::{
         mock_dependencies, mock_dependencies_with_balance, mock_env, mock_info, MockApi,
@@ -445,7 +462,29 @@ mod tests {
             action: ActionCommand::Stand,
         };
         let ret = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap();
+    }
 
+    fn create_game_storage(mut s: MockStorage, d: Hand, p: Hand) -> MockStorage {
+        let state = GameState {
+            ingame: true,
+            total_bet_amount: Uint128::new(100),
+            dealer_hand: d,
+            player_hand: p,
+        };
+
+        GAMESTATE.save(&mut s, &Addr::unchecked("user0000"), &state).unwrap();
+        s
+    }
+
+    #[test]
+    fn action_hit() {
+        let mut deps = init_with_balance();
+        deps.storage = create_game_storage(deps.storage, vec![Seven], vec![Ace]);
+
+        let msg = ExecuteMsg::Action {
+            action: ActionCommand::Hit,
+        };
+        let ret = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap();
         dbg!(ret);
     }
 }
