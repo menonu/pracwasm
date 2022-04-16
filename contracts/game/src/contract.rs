@@ -219,6 +219,24 @@ pub fn try_action(
         Judge::Draw(_, _) => GameResult::Draw,
     };
 
+    // change balance
+    let balance_change = match result {
+        GameResult::Win => game.total_bet_amount.saturating_mul(Uint128::new(2)),
+        GameResult::Loose => Uint128::new(0),
+        GameResult::Draw => game.total_bet_amount,
+    };
+
+    VAULT.update(
+        deps.storage,
+        &info.sender,
+        |vault: Option<Vault>| -> StdResult<Vault> {
+            let mut vault = vault.unwrap();
+            vault.balance = vault.balance.saturating_add(balance_change);
+            Ok(vault)
+        },
+    )?;
+
+    // update state
     game.ingame = false;
     game.dealer_hand = new_dealer_hand;
 
@@ -235,7 +253,7 @@ pub fn try_action(
         )
         .add_attribute("state", "end")
         .add_attribute("result", result.to_string())
-        .add_attribute("balance_change", String::from("0"))
+        .add_attribute("balance_change", balance_change)
         .add_attribute("judge", judge.to_string()))
 }
 
@@ -470,11 +488,10 @@ mod tests {
         };
         let _ = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap();
 
-        // action before bet is not allowed
         let msg = ExecuteMsg::Action {
             action: ActionCommand::Stand,
         };
-        let ret = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap();
+        let _ret = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap();
     }
 
     struct CreateOption {
@@ -510,6 +527,38 @@ mod tests {
     }
 
     #[test]
+    fn action_stand() {
+        let mut deps = init_with_balance();
+        deps.storage = create_game_storage(
+            deps.storage,
+            CreateOption {
+                d: vec![Five],
+                p: vec![Two, Three],
+                ..Default::default()
+            },
+        );
+
+        // loose
+        let msg = ExecuteMsg::Action {
+            action: ActionCommand::Stand,
+        };
+        let _ret = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap();
+
+        let ret: DepositResponse = from_binary(
+            &query(
+                deps.as_ref(),
+                mock_env(),
+                QueryMsg::GetDeposit {
+                    address: "user0000".to_string(),
+                },
+            )
+            .unwrap(),
+        )
+        .unwrap();
+        assert_eq!(Uint128::new(1000), ret.deposit);
+    }
+
+    #[test]
     fn action_hit() {
         let mut deps = init_with_balance();
         deps.storage = create_game_storage(
@@ -525,7 +574,6 @@ mod tests {
             action: ActionCommand::Hit,
         };
         let ret = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap();
-        dbg!(ret);
     }
 
     #[test]
