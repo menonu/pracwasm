@@ -32,7 +32,7 @@ pub type Hand = Vec<BJCard>;
 
 pub fn hand_to_string(hand: &Hand) -> String {
     let str: String = hand.iter().map(|c| c.to_string() + " ").collect();
-    format!("{}", str)
+    str
 }
 
 pub const CARDLIST: [BJCard; 13] = [
