@@ -26,6 +26,9 @@ pub enum ContractError {
 
     #[error("Wrong double down amount")]
     WrongDoublDownAmount { amount: Uint128 },
+
+    #[error("DoubleDown is not allowed")]
+    DoubleDownNotAllowed,
     // Add any other custom errors you like here.
     // Look at https://docs.rs/thiserror/1.0.21/thiserror/ for details.
 }

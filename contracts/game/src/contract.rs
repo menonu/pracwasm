@@ -179,7 +179,13 @@ pub fn try_action(
         ActionCommand::DoubleDown { amount } => {
             // raise, draw one, then close game
             if amount != game.total_bet_amount {
-                return Err(ContractError::WrongDoublDownAmount { amount });
+                return Err(ContractError::WrongDoublDownAmount {
+                    amount: game.total_bet_amount,
+                });
+            }
+
+            if game.player_hand.len() != 2 {
+                return Err(ContractError::DoubleDownNotAllowed {});
             }
 
             let _ = exec_bet(deps.storage, &info, amount)?;
@@ -269,8 +275,8 @@ fn query_deposit(deps: Deps, address: String) -> StdResult<DepositResponse> {
 
 #[cfg(test)]
 mod tests {
-    use crate::card::Hand;
     use crate::card::BJCard::*;
+    use crate::card::Hand;
 
     use super::*;
     use cosmwasm_std::testing::{
@@ -464,27 +470,136 @@ mod tests {
         let ret = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap();
     }
 
-    fn create_game_storage(mut s: MockStorage, d: Hand, p: Hand) -> MockStorage {
+    struct CreateOption {
+        d: Hand,
+        p: Hand,
+        amount: u128,
+        ingame: bool,
+    }
+
+    impl Default for CreateOption {
+        fn default() -> Self {
+            Self {
+                d: vec![],
+                p: vec![],
+                amount: 100,
+                ingame: true,
+            }
+        }
+    }
+
+    fn create_game_storage(mut s: MockStorage, option: CreateOption) -> MockStorage {
         let state = GameState {
-            ingame: true,
-            total_bet_amount: Uint128::new(100),
-            dealer_hand: d,
-            player_hand: p,
+            ingame: option.ingame,
+            total_bet_amount: Uint128::new(option.amount),
+            dealer_hand: option.d,
+            player_hand: option.p,
         };
 
-        GAMESTATE.save(&mut s, &Addr::unchecked("user0000"), &state).unwrap();
+        GAMESTATE
+            .save(&mut s, &Addr::unchecked("user0000"), &state)
+            .unwrap();
         s
     }
 
     #[test]
     fn action_hit() {
         let mut deps = init_with_balance();
-        deps.storage = create_game_storage(deps.storage, vec![Seven], vec![Ace]);
+        deps.storage = create_game_storage(
+            deps.storage,
+            CreateOption {
+                d: vec![Seven],
+                p: vec![Ten, Three],
+                ..Default::default()
+            },
+        );
 
         let msg = ExecuteMsg::Action {
             action: ActionCommand::Hit,
         };
         let ret = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap();
         dbg!(ret);
+    }
+
+    #[test]
+    fn action_doubledown() {
+        let mut deps = init_with_balance();
+        deps.storage = create_game_storage(
+            deps.storage,
+            CreateOption {
+                d: vec![Seven],
+                p: vec![Ten, Three],
+                ..Default::default()
+            },
+        );
+        let msg = ExecuteMsg::Action {
+            action: ActionCommand::DoubleDown {
+                amount: Uint128::new(100),
+            },
+        };
+        let _ = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap();
+
+        let mut deps = init_with_balance();
+        deps.storage = create_game_storage(
+            deps.storage,
+            CreateOption {
+                d: vec![Seven],
+                p: vec![Ten, Three, Three],
+                ..Default::default()
+            },
+        );
+        let msg = ExecuteMsg::Action {
+            action: ActionCommand::DoubleDown {
+                amount: Uint128::new(100),
+            },
+        };
+        // doubledown after hit is not allowd
+        let err = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap_err();
+        assert_eq!(ContractError::DoubleDownNotAllowed {}, err);
+
+        let mut deps = init_with_balance();
+        deps.storage = create_game_storage(
+            deps.storage,
+            CreateOption {
+                d: vec![Seven],
+                p: vec![Ten, Three],
+                amount: 1200,
+                ..Default::default()
+            },
+        );
+        let msg = ExecuteMsg::Action {
+            action: ActionCommand::DoubleDown {
+                amount: Uint128::new(1200),
+            },
+        };
+        let err = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap_err();
+        assert_eq!(
+            ContractError::ShortBalance {
+                balance: Uint128::new(1000)
+            },
+            err
+        );
+
+        let mut deps = init_with_balance();
+        deps.storage = create_game_storage(
+            deps.storage,
+            CreateOption {
+                d: vec![Seven],
+                p: vec![Ten, Three],
+                ..Default::default()
+            },
+        );
+        let msg = ExecuteMsg::Action {
+            action: ActionCommand::DoubleDown {
+                amount: Uint128::new(200),
+            },
+        };
+        let err = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap_err();
+        assert_eq!(
+            ContractError::WrongDoublDownAmount {
+                amount: Uint128::new(100)
+            },
+            err
+        );
     }
 }
