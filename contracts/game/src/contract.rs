@@ -225,7 +225,14 @@ pub fn try_action(
     GAMESTATE.save(deps.storage, &info.sender, &game)?;
 
     Ok(Response::new()
-        .add_attribute("action", "action")
+        .add_attribute(
+            "action",
+            match action {
+                ActionCommand::Stand => "stand",
+                ActionCommand::Hit => "hit",
+                ActionCommand::DoubleDown { amount: _ } => "doubledown",
+            },
+        )
         .add_attribute("state", "end")
         .add_attribute("result", result.to_string())
         .add_attribute("balance_change", String::from("0"))
