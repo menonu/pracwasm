@@ -161,8 +161,8 @@ pub fn try_action(
 
     match action {
         ActionCommand::Hit => {
-            game.player_hand
-                .push(game::draw_one(&mut random::gen_rng(env.block.time)));
+            let draw = game::draw_one(&mut random::gen_rng(env.block.time));
+            game.player_hand.push(draw);
 
             // check busted or not
             if let Judge::PlayerBusted(_) = game::judge(&[], &game.player_hand) {
@@ -173,7 +173,8 @@ pub fn try_action(
                 return Ok(Response::new()
                     .add_attribute("action", "hit")
                     .add_attribute("dealer_cards", hand_to_string(&game.dealer_hand))
-                    .add_attribute("player_cards", hand_to_string(&game.player_hand)));
+                    .add_attribute("player_cards", hand_to_string(&game.player_hand))
+                    .add_attribute("draw", draw.to_string()));
             }
         }
         ActionCommand::DoubleDown { amount } => {
