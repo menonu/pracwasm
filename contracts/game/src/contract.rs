@@ -315,6 +315,7 @@ fn query_gamestate(deps: Deps, address: String) -> StdResult<GameStateResponce> 
 mod tests {
     use crate::card::BJCard::*;
     use crate::card::Hand;
+    use crate::msg::GameStateResponce;
 
     use super::*;
     use cosmwasm_std::testing::{
@@ -586,7 +587,90 @@ mod tests {
         let msg = ExecuteMsg::Action {
             action: ActionCommand::Hit,
         };
-        let ret = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap();
+        let hit = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap();
+        let hit_arr_draw = &hit.attributes.get(3).expect("no attribute").value;
+        assert_eq!("6", hit_arr_draw);
+
+        let msg = QueryMsg::GetGameState {
+            address: "user0000".to_string(),
+        };
+        let ret = query(deps.as_ref(), mock_env(), msg).unwrap();
+        let res: GameStateResponce = from_binary(&ret).unwrap();
+
+        assert_eq!(
+            GameState {
+                ingame: true,
+                total_bet_amount: Uint128::new(100),
+                dealer_hand: vec![Seven],
+                player_hand: vec![Ten, Three, Six],
+            },
+            res.state
+        );
+
+        // hit after stand/doubledown is not allowed
+        let mut deps = init_with_balance();
+        deps.storage = create_game_storage(
+            deps.storage,
+            CreateOption {
+                d: vec![Seven],
+                p: vec![Ten, Three],
+                ..Default::default()
+            },
+        );
+        // stand then hit
+        let _ret = execute(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("user0000", &[]),
+            ExecuteMsg::Action {
+                action: ActionCommand::Stand,
+            },
+        )
+        .unwrap();
+
+        let ret = execute(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("user0000", &[]),
+            ExecuteMsg::Action {
+                action: ActionCommand::Hit,
+            },
+        )
+        .unwrap_err();
+        assert_eq!(ContractError::ActionBeforeBetError {}, ret);
+
+
+        // doubledown then hit
+        let mut deps = init_with_balance();
+        deps.storage = create_game_storage(
+            deps.storage,
+            CreateOption {
+                d: vec![Seven],
+                p: vec![Ten, Three],
+                ..Default::default()
+            },
+        );
+
+        let _ret = execute(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("user0000", &[]),
+            ExecuteMsg::Action {
+                action: ActionCommand::DoubleDown { amount: Uint128::new(100) },
+            },
+        )
+        .unwrap();
+
+        let ret = execute(
+            deps.as_mut(),
+            mock_env(),
+            mock_info("user0000", &[]),
+            ExecuteMsg::Action {
+                action: ActionCommand::Hit {},
+            },
+        )
+        .unwrap_err();
+        assert_eq!(ContractError::ActionBeforeBetError {}, ret);
     }
 
     #[test]
