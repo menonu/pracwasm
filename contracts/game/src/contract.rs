@@ -290,12 +290,18 @@ fn query_count(deps: Deps) -> StdResult<CountResponse> {
 }
 
 fn query_deposit(deps: Deps, address: String) -> StdResult<DepositResponse> {
-    let vault = VAULT.may_load(deps.storage, &Addr::unchecked(&address))?;
+    let address = deps.api.addr_validate(&address)?;
+    let vault = VAULT.may_load(deps.storage, &address)?;
     let deposit = if let Some(k) = vault {
         k.balance
     } else {
         Uint128::new(0)
     };
+    Ok(DepositResponse {
+        address: address.to_string(),
+        deposit,
+    })
+}
 
 fn query_gamestate(deps: Deps, address: String) -> StdResult<GameStateResponce> {
     let address = deps.api.addr_validate(&address)?;
