@@ -639,7 +639,6 @@ mod tests {
         .unwrap_err();
         assert_eq!(ContractError::ActionBeforeBetError {}, ret);
 
-
         // doubledown then hit
         let mut deps = init_with_balance();
         deps.storage = create_game_storage(
@@ -656,7 +655,9 @@ mod tests {
             mock_env(),
             mock_info("user0000", &[]),
             ExecuteMsg::Action {
-                action: ActionCommand::DoubleDown { amount: Uint128::new(100) },
+                action: ActionCommand::DoubleDown {
+                    amount: Uint128::new(100),
+                },
             },
         )
         .unwrap();
