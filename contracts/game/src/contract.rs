@@ -11,8 +11,8 @@ use crate::card::hand_to_string;
 use crate::error::ContractError;
 use crate::game::dealer_action;
 use crate::msg::{
-    ActionCommand, CountResponse, Cw20HookMsg, DepositResponse, ExecuteMsg, InstantiateMsg,
-    QueryMsg,
+    ActionCommand, CountResponse, Cw20HookMsg, DepositResponse, ExecuteMsg, GameStateResponce,
+    InstantiateMsg, QueryMsg,
 };
 use crate::state::{Config, GameState, State, Vault, CONFIG, GAMESTATE, STATE, VAULT};
 use crate::{game, random};
@@ -280,6 +280,7 @@ pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
         QueryMsg::GetCount {} => to_binary(&query_count(deps)?),
         QueryMsg::GetDeposit { address } => to_binary(&query_deposit(deps, address)?),
+        QueryMsg::GetGameState { address } => to_binary(&query_gamestate(deps, address)?),
     }
 }
 
@@ -295,7 +296,12 @@ fn query_deposit(deps: Deps, address: String) -> StdResult<DepositResponse> {
     } else {
         Uint128::new(0)
     };
-    Ok(DepositResponse { address, deposit })
+
+fn query_gamestate(deps: Deps, address: String) -> StdResult<GameStateResponce> {
+    let address = deps.api.addr_validate(&address)?;
+    let state = GAMESTATE.load(deps.storage, &address)?;
+
+    Ok(GameStateResponce { state })
 }
 
 #[cfg(test)]

@@ -3,6 +3,8 @@ use cw20::Cw20ReceiveMsg;
 use schemars::JsonSchema;
 use serde::{Deserialize, Serialize};
 
+use crate::state::GameState;
+
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
 pub struct InstantiateMsg {
     pub cw20_address: String,
@@ -41,6 +43,7 @@ pub enum QueryMsg {
     // GetCount returns the current count as a json-encoded number
     GetCount {},
     GetDeposit { address: String },
+    GetGameState { address: String },
 }
 
 // We define a custom struct for each query response
@@ -53,4 +56,9 @@ pub struct CountResponse {
 pub struct DepositResponse {
     pub address: String,
     pub deposit: Uint128,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]
+pub struct GameStateResponce {
+    pub state: GameState,
 }
