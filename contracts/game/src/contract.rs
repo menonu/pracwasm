@@ -11,7 +11,7 @@ use crate::card::hand_to_string;
 use crate::error::ContractError;
 use crate::game::dealer_action;
 use crate::msg::{
-    ActionCommand, CountResponse, Cw20HookMsg, DepositResponse, ExecuteMsg, GameStateResponce,
+    ActionCommand, Cw20HookMsg, DepositResponse, ExecuteMsg, GameStateResponce,
     InstantiateMsg, QueryMsg,
 };
 use crate::state::{Config, GameState, State, Vault, CONFIG, GAMESTATE, STATE, VAULT};
@@ -279,15 +279,9 @@ fn exec_bet(
 #[cfg_attr(not(feature = "library"), entry_point)]
 pub fn query(deps: Deps, _env: Env, msg: QueryMsg) -> StdResult<Binary> {
     match msg {
-        QueryMsg::GetCount {} => to_binary(&query_count(deps)?),
         QueryMsg::GetDeposit { address } => to_binary(&query_deposit(deps, address)?),
         QueryMsg::GetGameState { address } => to_binary(&query_gamestate(deps, address)?),
     }
-}
-
-fn query_count(deps: Deps) -> StdResult<CountResponse> {
-    let _state = STATE.load(deps.storage)?;
-    Ok(CountResponse { count: 0 })
 }
 
 fn query_deposit(deps: Deps, address: String) -> StdResult<DepositResponse> {
@@ -357,11 +351,6 @@ mod tests {
         // we can just call .unwrap() to assert this was a success
         let res = instantiate(deps.as_mut(), mock_env(), info, msg).unwrap();
         assert_eq!(0, res.messages.len());
-
-        // it worked, let's query the state
-        let res = query(deps.as_ref(), mock_env(), QueryMsg::GetCount {}).unwrap();
-        let value: CountResponse = from_binary(&res).unwrap();
-        assert_eq!(0, value.count);
     }
 
     #[test]

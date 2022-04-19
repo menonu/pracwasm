@@ -3,7 +3,7 @@ use std::fs::create_dir_all;
 
 use cosmwasm_schema::{export_schema, remove_schemas, schema_for};
 
-use bj_game::msg::{CountResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
+use bj_game::msg::{DepositResponse, ExecuteMsg, GameStateResponce, InstantiateMsg, QueryMsg};
 use bj_game::state::State;
 
 fn main() {
@@ -16,5 +16,6 @@ fn main() {
     export_schema(&schema_for!(ExecuteMsg), &out_dir);
     export_schema(&schema_for!(QueryMsg), &out_dir);
     export_schema(&schema_for!(State), &out_dir);
-    export_schema(&schema_for!(CountResponse), &out_dir);
+    export_schema(&schema_for!(DepositResponse), &out_dir);
+    export_schema(&schema_for!(GameStateResponce), &out_dir);
 }
