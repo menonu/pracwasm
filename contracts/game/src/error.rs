@@ -12,6 +12,12 @@ pub enum ContractError {
     #[error("Invalid State")]
     InvalidState {},
 
+    #[error("No such account exists")]
+    NoSuchAccountExists {},
+
+    #[error("Bets must be placed before the start")]
+    BetAfterStart {},
+
     #[error("Bet amount must be >0")]
     BetAmountZero {},
 
@@ -22,7 +28,7 @@ pub enum ContractError {
     CustomError { val: String },
 
     #[error("Action before bet is not allowed")]
-    ActionBeforeBetError {},
+    ActionBeforeBet {},
 
     #[error("Wrong double down amount")]
     WrongDoublDownAmount { amount: Uint128 },

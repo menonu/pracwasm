@@ -128,7 +128,7 @@ pub fn try_bet(
         match state {
             Some(v) => {
                 if v.ingame {
-                    return Err(ContractError::InvalidState {});
+                    return Err(ContractError::BetAfterStart {});
                 }
 
                 Ok(new_game)
@@ -153,10 +153,10 @@ pub fn try_action(
 ) -> Result<Response, ContractError> {
     let mut game = GAMESTATE
         .load(deps.storage, &info.sender)
-        .map_err(|_| ContractError::ActionBeforeBetError {})?;
+        .map_err(|_| ContractError::NoSuchAccountExists {})?;
 
     if !game.ingame {
-        return Err(ContractError::ActionBeforeBetError {});
+        return Err(ContractError::ActionBeforeBet {});
     }
 
     match action {
@@ -272,7 +272,7 @@ fn exec_bet(
             v.balance -= amount;
             Ok(v)
         }
-        None => Err(ContractError::InvalidState {}),
+        None => Err(ContractError::NoSuchAccountExists {}),
     })
 }
 
@@ -469,7 +469,7 @@ mod tests {
             amount: Uint128::new(100),
         };
         let res = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap_err();
-        assert_eq!(ContractError::InvalidState {}, res);
+        assert_eq!(ContractError::BetAfterStart {}, res);
 
         // bet more than user's deposit is not allowed.
         let mut deps = init_with_balance();
@@ -484,6 +484,13 @@ mod tests {
             },
             res
         );
+
+        // other0000 fail to bet
+        let msg = ExecuteMsg::Bet {
+            amount: Uint128::new(100),
+        };
+        let res = execute(deps.as_mut(), mock_env(), mock_info("other0000", &[]), msg).unwrap_err();
+        assert_eq!(ContractError::NoSuchAccountExists {}, res);
     }
 
     #[test]
@@ -495,12 +502,19 @@ mod tests {
             action: ActionCommand::Stand,
         };
         let ret = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap_err();
-        assert_eq!(ContractError::ActionBeforeBetError {}, ret);
+        assert_eq!(ContractError::NoSuchAccountExists {}, ret);
 
         let msg = ExecuteMsg::Bet {
             amount: Uint128::new(100),
         };
         let _ = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap();
+
+        // other0000 fail to action
+        let msg = ExecuteMsg::Action {
+            action: ActionCommand::Stand,
+        };
+        let res = execute(deps.as_mut(), mock_env(), mock_info("other0000", &[]), msg).unwrap_err();
+        assert_eq!(ContractError::NoSuchAccountExists {}, res);
 
         let msg = ExecuteMsg::Action {
             action: ActionCommand::Stand,
@@ -570,6 +584,13 @@ mod tests {
         )
         .unwrap();
         assert_eq!(Uint128::new(1000), ret.deposit);
+
+        // stand after stand should be failed
+        let msg = ExecuteMsg::Action {
+            action: ActionCommand::Stand,
+        };
+        let ret = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap_err();
+        assert_eq!(ContractError::ActionBeforeBet {}, ret);
     }
 
     #[test]
@@ -637,7 +658,7 @@ mod tests {
             },
         )
         .unwrap_err();
-        assert_eq!(ContractError::ActionBeforeBetError {}, ret);
+        assert_eq!(ContractError::ActionBeforeBet {}, ret);
 
         // doubledown then hit
         let mut deps = init_with_balance();
@@ -671,7 +692,7 @@ mod tests {
             },
         )
         .unwrap_err();
-        assert_eq!(ContractError::ActionBeforeBetError {}, ret);
+        assert_eq!(ContractError::ActionBeforeBet {}, ret);
     }
 
     #[test]
