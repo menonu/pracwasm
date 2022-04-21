@@ -3,27 +3,6 @@
   "title": "ExecuteMsg",
   "oneOf": [
     {
-      "type": "object",
-      "required": [
-        "reset"
-      ],
-      "properties": {
-        "reset": {
-          "type": "object",
-          "required": [
-            "count"
-          ],
-          "properties": {
-            "count": {
-              "type": "integer",
-              "format": "int32"
-            }
-          }
-        }
-      },
-      "additionalProperties": false
-    },
-    {
       "description": "Receives a message of type [`Cw20ReceiveMsg`]",
       "type": "object",
       "required": [
@@ -70,6 +49,26 @@
           "properties": {
             "action": {
               "$ref": "#/definitions/ActionCommand"
+            }
+          }
+        }
+      },
+      "additionalProperties": false
+    },
+    {
+      "type": "object",
+      "required": [
+        "withdraw"
+      ],
+      "properties": {
+        "withdraw": {
+          "type": "object",
+          "required": [
+            "amount"
+          ],
+          "properties": {
+            "amount": {
+              "$ref": "#/definitions/Uint128"
             }
           }
         }

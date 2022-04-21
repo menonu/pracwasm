@@ -5,11 +5,19 @@
     {
       "type": "object",
       "required": [
-        "get_count"
+        "get_deposit"
       ],
       "properties": {
-        "get_count": {
-          "type": "object"
+        "get_deposit": {
+          "type": "object",
+          "required": [
+            "address"
+          ],
+          "properties": {
+            "address": {
+              "type": "string"
+            }
+          }
         }
       },
       "additionalProperties": false
@@ -17,10 +25,10 @@
     {
       "type": "object",
       "required": [
-        "get_deposit"
+        "get_game_state"
       ],
       "properties": {
-        "get_deposit": {
+        "get_game_state": {
           "type": "object",
           "required": [
             "address"
