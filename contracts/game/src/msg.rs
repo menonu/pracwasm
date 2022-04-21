@@ -29,6 +29,9 @@ pub enum ExecuteMsg {
     Action {
         action: ActionCommand,
     },
+    Withdraw {
+        amount: Uint128,
+    },
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug, PartialEq, JsonSchema)]

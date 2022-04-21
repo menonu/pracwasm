@@ -21,8 +21,8 @@ pub enum ContractError {
     #[error("Bet amount must be >0")]
     BetAmountZero {},
 
-    #[error("Balance is too low")]
-    ShortBalance { balance: Uint128 },
+    #[error("Insufficient balance")]
+    InsufficientBalance { balance: Uint128 },
 
     #[error("Custom Error val: {val:?}")]
     CustomError { val: String },

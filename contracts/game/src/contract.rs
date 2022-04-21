@@ -1,18 +1,21 @@
 #[cfg(not(feature = "library"))]
 use cosmwasm_std::entry_point;
+use cosmwasm_std::CosmosMsg;
+use cosmwasm_std::WasmMsg;
 use cosmwasm_std::{
     from_binary, to_binary, Addr, Binary, Deps, DepsMut, Env, MessageInfo, Response, StdResult,
     Storage, Uint128,
 };
 use cw2::set_contract_version;
+use cw20::Cw20ExecuteMsg;
 use cw20::Cw20ReceiveMsg;
 
 use crate::card::hand_to_string;
 use crate::error::ContractError;
 use crate::game::dealer_action;
 use crate::msg::{
-    ActionCommand, Cw20HookMsg, DepositResponse, ExecuteMsg, GameStateResponce,
-    InstantiateMsg, QueryMsg,
+    ActionCommand, Cw20HookMsg, DepositResponse, ExecuteMsg, GameStateResponce, InstantiateMsg,
+    QueryMsg,
 };
 use crate::state::{Config, GameState, State, Vault, CONFIG, GAMESTATE, STATE, VAULT};
 use crate::{game, random};
@@ -57,6 +60,7 @@ pub fn execute(
         ExecuteMsg::Receive(msg) => receive_cw20(deps, info, msg),
         ExecuteMsg::Bet { amount } => try_bet(deps, _env, info, amount),
         ExecuteMsg::Action { action } => try_action(deps, _env, info, action),
+        ExecuteMsg::Withdraw { amount } => try_withdraw(deps, info, amount),
     }
 }
 
@@ -96,6 +100,39 @@ pub fn receive_cw20(
         }
         Err(err) => Err(ContractError::Std(err)),
     }
+}
+
+fn try_withdraw(
+    deps: DepsMut,
+    info: MessageInfo,
+    amount: Uint128,
+) -> Result<Response, ContractError> {
+    VAULT.update(deps.storage, &info.sender, |vault| match vault {
+        Some(mut v) => {
+            if amount > v.balance {
+                return Err(ContractError::InsufficientBalance { balance: v.balance });
+            }
+            v.balance -= amount;
+            Ok(v)
+        }
+        None => Err(ContractError::NoSuchAccountExists {}),
+    })?;
+
+    let token_address = CONFIG.load(deps.storage)?.token_address;
+
+    let msg: CosmosMsg = CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: token_address.to_string(),
+        msg: to_binary(&Cw20ExecuteMsg::Transfer {
+            recipient: info.sender.to_string(),
+            amount,
+        })?,
+        funds: vec![],
+    });
+
+    Ok(Response::new()
+        .add_attribute("action", "withdraw")
+        .add_attribute("withdraw_amount", amount)
+        .add_message(msg))
 }
 
 /// User bet against the dealer.
@@ -266,7 +303,7 @@ fn exec_bet(
     VAULT.update(storage, &info.sender, |vault| match vault {
         Some(mut v) => {
             if amount > v.balance {
-                return Err(ContractError::ShortBalance { balance: v.balance });
+                return Err(ContractError::InsufficientBalance { balance: v.balance });
             }
 
             v.balance -= amount;
@@ -468,7 +505,7 @@ mod tests {
         };
         let res = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap_err();
         assert_eq!(
-            ContractError::ShortBalance {
+            ContractError::InsufficientBalance {
                 balance: Uint128::new(1000)
             },
             res
@@ -737,7 +774,7 @@ mod tests {
         };
         let err = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap_err();
         assert_eq!(
-            ContractError::ShortBalance {
+            ContractError::InsufficientBalance {
                 balance: Uint128::new(1000)
             },
             err
@@ -761,6 +798,34 @@ mod tests {
         assert_eq!(
             ContractError::WrongDoublDownAmount {
                 amount: Uint128::new(100)
+            },
+            err
+        );
+    }
+
+    #[test]
+    fn withdraw() {
+        let mut deps = init_with_balance();
+        let msg = ExecuteMsg::Withdraw {
+            amount: Uint128::new(100),
+        };
+        let _ = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap();
+
+        // other user could not withdraw
+        let msg = ExecuteMsg::Withdraw {
+            amount: Uint128::new(100),
+        };
+        let err = execute(deps.as_mut(), mock_env(), mock_info("other0000", &[]), msg).unwrap_err();
+        assert_eq!(ContractError::NoSuchAccountExists {}, err);
+
+        // insufficient balance
+        let msg = ExecuteMsg::Withdraw {
+            amount: Uint128::new(10000),
+        };
+        let err = execute(deps.as_mut(), mock_env(), mock_info("user0000", &[]), msg).unwrap_err();
+        assert_eq!(
+            ContractError::InsufficientBalance {
+                balance: Uint128::new(900)
             },
             err
         );
