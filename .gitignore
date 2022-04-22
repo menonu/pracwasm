@@ -14,3 +14,6 @@ contract/**/target
 # IDEs
 *.iml
 .idea
+
+# wasm
+artifacts/
