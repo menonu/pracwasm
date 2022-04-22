@@ -4,7 +4,7 @@ mod tests {
     use crate::msg::InstantiateMsg;
     use cosmwasm_std::{
         testing::{mock_env, MockApi, MockStorage},
-        Addr, Coin, Empty, Uint128,
+        Addr, Empty,
     };
     use cw_multi_test::{App, BankKeeper, Contract, ContractWrapper, Executor};
 

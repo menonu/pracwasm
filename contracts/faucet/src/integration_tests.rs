@@ -2,9 +2,12 @@
 mod tests {
     use crate::helpers::CwTemplateContract;
     use crate::msg::InstantiateMsg;
-    use cosmwasm_std::{Addr, Coin, Empty, Uint128};
+    use cosmwasm_std::{
+        testing::{mock_env, MockApi, MockStorage},
+        Addr, Empty, Uint128,
+    };
     use cw20_base;
-    use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
+    use cw_multi_test::{App, BankKeeper, Contract, ContractWrapper, Executor};
 
     pub fn contract_template() -> Box<dyn Contract<Empty>> {
         let contract = ContractWrapper::new(
@@ -27,22 +30,14 @@ mod tests {
 
     const USER: &str = "USER";
     const ADMIN: &str = "ADMIN";
-    const NATIVE_DENOM: &str = "denom";
+    // const NATIVE_DENOM: &str = "denom";
 
-    fn mock_app() -> App {
-        AppBuilder::new().build(|router, _, storage| {
-            router
-                .bank
-                .init_balance(
-                    storage,
-                    &Addr::unchecked(USER),
-                    vec![Coin {
-                        denom: NATIVE_DENOM.to_string(),
-                        amount: Uint128::new(1),
-                    }],
-                )
-                .unwrap();
-        })
+    fn mock_app() -> App<Empty> {
+        let env = mock_env();
+        let api = MockApi::default();
+        let bank = BankKeeper::new();
+
+        App::new(api, env.block, bank, MockStorage::new())
     }
 
     fn proper_instantiate() -> (App, CwTemplateContract) {

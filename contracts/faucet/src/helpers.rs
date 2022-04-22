@@ -40,7 +40,8 @@ impl CwTemplateContract {
             msg: to_binary(&msg)?,
         }
         .into();
-        let res: ClaimedResponse = QuerierWrapper::<CQ>::new(querier).query(&query)?;
+        // let res: ClaimedResponse = QuerierWrapper::<CQ>::new(querier).query(&query)?;
+        let res: ClaimedResponse = QuerierWrapper::new(querier).query(&query)?;
         Ok(res)
     }
 }

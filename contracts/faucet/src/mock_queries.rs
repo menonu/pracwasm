@@ -44,7 +44,7 @@ impl WasmQuerier {
         match request {
             WasmQuery::Smart { contract_addr, msg } => self.dispatch(contract_addr, msg),
             WasmQuery::Raw { contract_addr, .. } => return_notfound(contract_addr),
-            WasmQuery::ContractInfo { contract_addr, .. } => return_notfound(contract_addr),
+            // WasmQuery::ContractInfo { contract_addr, .. } => return_notfound(contract_addr),
             _ => SystemResult::Err(SystemError::UnsupportedRequest {
                 kind: "Unknown WasmQuery".to_string(),
             }),
@@ -101,7 +101,8 @@ impl Querier for WasmMockQuerier {
 impl WasmMockQuerier {
     pub fn new(cw20_balances: Option<&[Cw20Balance]>) -> Self {
         WasmMockQuerier {
-            default_querier: MockQuerier::default(),
+            // default_querier: MockQuerier::default(),
+            default_querier: MockQuerier::new(&[]),
             wasm_querier: WasmQuerier::new(cw20_balances),
         }
     }

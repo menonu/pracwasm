@@ -180,16 +180,15 @@ fn query_claimed(deps: Deps) -> StdResult<ClaimedResponse> {
 #[cfg(test)]
 mod tests {
     use std::collections::HashMap;
-    use std::marker::PhantomData;
 
     use crate::mock_queries::{Cw20Balance, WasmMockQuerier};
 
     use super::*;
     use cosmwasm_std::testing::{
-        mock_dependencies_with_balance, mock_env, mock_info, MockApi, MockStorage,
+        mock_dependencies_with_balances, mock_env, mock_info, MockApi, MockStorage,
     };
     use cosmwasm_std::{
-        coins, from_binary, OwnedDeps, ReplyOn, SubMsg, SubMsgExecutionResponse, SubMsgResult,
+        coins, from_binary, ContractResult, OwnedDeps, ReplyOn, SubMsg, SubMsgExecutionResponse,
     };
     use prost::Message;
 
@@ -213,7 +212,7 @@ mod tests {
                 storage: MockStorage::default(),
                 api: MockApi::default(),
                 querier: WasmMockQuerier::new(Some(&self.cw20)),
-                custom_query_type: PhantomData,
+                // custom_query_type: PhantomData,
             }
         }
     }
@@ -239,7 +238,7 @@ mod tests {
         // Build reply message
         let msg = Reply {
             id: msg_id,
-            result: SubMsgResult::Ok(SubMsgExecutionResponse {
+            result: ContractResult::Ok(SubMsgExecutionResponse {
                 events: vec![],
                 data: Some(encoded_instantiate_reply.into()),
             }),
@@ -250,7 +249,7 @@ mod tests {
 
     #[test]
     fn proper_initialization() {
-        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+        let mut deps = mock_dependencies_with_balances(&[("creator", &coins(2, "token"))]);
 
         let msg = InstantiateMsg {
             claimed: Uint128::from(10u128),
@@ -337,7 +336,7 @@ mod tests {
 
     #[test]
     fn topup() {
-        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+        let mut deps = mock_dependencies_with_balances(&[("creator", &coins(2, "token"))]);
         let msg = InstantiateMsg {
             claimed: Uint128::from(0u128),
             token_name: "some token".to_string(),

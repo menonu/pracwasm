@@ -353,7 +353,7 @@ mod tests {
         mock_dependencies, mock_dependencies_with_balances, mock_env, mock_info, MockApi,
         MockQuerier, MockStorage,
     };
-    use cosmwasm_std::{coins, from_binary, Empty, OwnedDeps};
+    use cosmwasm_std::{coins, from_binary, OwnedDeps};
 
     fn init_with_balance() -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
         let mut deps = mock_dependencies_with_balances(&[("creator", &coins(2, "token"))]);
