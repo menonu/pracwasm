@@ -350,13 +350,13 @@ mod tests {
 
     use super::*;
     use cosmwasm_std::testing::{
-        mock_dependencies, mock_dependencies_with_balance, mock_env, mock_info, MockApi,
+        mock_dependencies, mock_dependencies_with_balances, mock_env, mock_info, MockApi,
         MockQuerier, MockStorage,
     };
     use cosmwasm_std::{coins, from_binary, Empty, OwnedDeps};
 
-    fn init_with_balance() -> OwnedDeps<MockStorage, MockApi, MockQuerier, Empty> {
-        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+    fn init_with_balance() -> OwnedDeps<MockStorage, MockApi, MockQuerier> {
+        let mut deps = mock_dependencies_with_balances(&[("creator", &coins(2, "token"))]);
 
         let msg = InstantiateMsg {
             cw20_address: "token0000".to_string(),
@@ -378,7 +378,7 @@ mod tests {
 
     #[test]
     fn proper_initialization() {
-        let mut deps = mock_dependencies_with_balance(&coins(2, "token"));
+        let mut deps = mock_dependencies(&[]);
 
         let msg = InstantiateMsg {
             cw20_address: "token0000".to_string(),
@@ -392,7 +392,7 @@ mod tests {
 
     #[test]
     fn deposit() {
-        let mut deps = mock_dependencies();
+        let mut deps = mock_dependencies(&[]);
 
         let msg = InstantiateMsg {
             cw20_address: "token0000".to_string(),
@@ -461,7 +461,7 @@ mod tests {
 
     #[test]
     fn bet() {
-        let mut deps = mock_dependencies();
+        let mut deps = mock_dependencies(&[]);
 
         let msg = InstantiateMsg {
             cw20_address: "token0000".to_string(),
