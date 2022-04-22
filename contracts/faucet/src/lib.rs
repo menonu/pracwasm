@@ -6,6 +6,9 @@ pub mod msg;
 mod querier;
 pub mod state;
 
+// import from cw0
+mod parse_reply;
+
 #[cfg(test)]
 mod mock_queries;
 

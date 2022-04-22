@@ -6,10 +6,11 @@ use cosmwasm_std::{
 };
 use cw2::set_contract_version;
 use cw20::{self, Cw20ExecuteMsg, MinterResponse};
-use cw_utils::parse_instantiate_response_data;
+// use cw_utils::{parse_instantiate_response_data, MsgInstantiateContractResponse};
 
 use crate::error::ContractError;
 use crate::msg::{ClaimedResponse, ExecuteMsg, InstantiateMsg, QueryMsg};
+use crate::parse_reply::{parse_instantiate_response_data, MsgInstantiateContractResponse};
 use crate::querier;
 use crate::state::{State, Stats, STATE, STATS};
 
@@ -75,9 +76,9 @@ pub fn instantiate(
 pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractError> {
     let mut state: State = STATE.load(deps.storage)?;
 
-    let res = msg.result.unwrap();
-    let data =
-        parse_instantiate_response_data(res.data.unwrap_or_default().as_slice()).map_err(|_| {
+    let data = msg.result.unwrap().data.unwrap();
+    let res: MsgInstantiateContractResponse = parse_instantiate_response_data(data.as_slice())
+        .map_err(|_| {
             StdError::parse_err("MsgInstantiateContractResponse", "failed to parse data")
         })?;
 
@@ -85,7 +86,7 @@ pub fn reply(deps: DepsMut, _env: Env, msg: Reply) -> Result<Response, ContractE
         return Err(ContractError::Unauthorized {});
     }
 
-    state.token_address = deps.api.addr_validate(&data.contract_address)?;
+    state.token_address = deps.api.addr_validate(&res.contract_address)?;
     STATE.save(deps.storage, &state)?;
 
     Ok(Response::new().add_attribute("token address", state.token_address))
