@@ -108,14 +108,14 @@ pub fn execute(
 pub fn try_claim(
     deps: DepsMut,
     env: Env,
-    _info: MessageInfo,
+    info: MessageInfo,
     amount: Uint128,
 ) -> Result<Response, ContractError> {
     let state = STATE.load(deps.storage)?;
 
     // validate balance
     let balance =
-        querier::query_token_balance(deps.as_ref(), state.token_address, env.contract.address)?;
+        querier::query_token_balance(deps.as_ref(), state.token_address.clone(), env.contract.address)?;
 
     if balance < amount {
         return Err(ContractError::OutOfStock {});
@@ -126,7 +126,17 @@ pub fn try_claim(
         Ok(stats)
     })?;
 
+    let msg: CosmosMsg = CosmosMsg::Wasm(WasmMsg::Execute {
+        contract_addr: state.token_address.to_string(),
+        msg: to_binary(&Cw20ExecuteMsg::Transfer {
+            recipient: info.sender.to_string(),
+            amount,
+        })?,
+        funds: vec![],
+    });
+
     Ok(Response::new()
+        .add_message(msg)
         .add_attribute("method", "claim")
         .add_attribute("amount", amount.to_string())
         .add_attribute("total_claimed", stats.claimed.to_string()))

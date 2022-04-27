@@ -54,5 +54,5 @@ rand = { version = "0.8.5", features = ["small_rng"], default-features = false }
 
 [dev-dependencies]
 cosmwasm-schema = { version = "0.16.7" }
-cw-multi-test = "0.8.1"
+cw-multi-test = { git = "https://github.com/CosmWasm/cw-plus", branch = "0.9.x", package = "cw-multi-test"}
 prost = "0.9"

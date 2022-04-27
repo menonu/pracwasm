@@ -2,12 +2,9 @@
 mod tests {
     use crate::helpers::CwTemplateContract;
     use crate::msg::InstantiateMsg;
-    use cosmwasm_std::{
-        testing::{mock_env, MockApi, MockStorage},
-        Addr, Empty, Uint128,
-    };
+    use cosmwasm_std::{Addr, Empty, Uint128};
     use cw20_base;
-    use cw_multi_test::{App, BankKeeper, Contract, ContractWrapper, Executor};
+    use cw_multi_test::{App, AppBuilder, Contract, ContractWrapper, Executor};
 
     pub fn contract_template() -> Box<dyn Contract<Empty>> {
         let contract = ContractWrapper::new(
@@ -28,16 +25,12 @@ mod tests {
         Box::new(contract)
     }
 
-    const USER: &str = "USER";
-    const ADMIN: &str = "ADMIN";
+    const USER: &str = "user0000";
+    const ADMIN: &str = "admin0000";
     // const NATIVE_DENOM: &str = "denom";
 
     fn mock_app() -> App<Empty> {
-        let env = mock_env();
-        let api = MockApi::default();
-        let bank = BankKeeper::new();
-
-        App::new(api, env.block, bank, MockStorage::new())
+        AppBuilder::new().build()
     }
 
     fn proper_instantiate() -> (App, CwTemplateContract) {
@@ -47,8 +40,8 @@ mod tests {
 
         let msg = InstantiateMsg {
             claimed: Uint128::new(0),
-            token_name: "Piyo token".to_string(),
-            token_symbol: "PIYO".to_string(),
+            token_name: "some token".to_string(),
+            token_symbol: "some".to_string(),
             cw20_code_id: cw20base_id,
         };
         let cw_template_contract_addr = app
