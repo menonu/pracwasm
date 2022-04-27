@@ -114,8 +114,11 @@ pub fn try_claim(
     let state = STATE.load(deps.storage)?;
 
     // validate balance
-    let balance =
-        querier::query_token_balance(deps.as_ref(), state.token_address.clone(), env.contract.address)?;
+    let balance = querier::query_token_balance(
+        deps.as_ref(),
+        state.token_address.clone(),
+        env.contract.address,
+    )?;
 
     if balance < amount {
         return Err(ContractError::OutOfStock {});
@@ -243,7 +246,7 @@ mod tests {
         };
 
         let mut encoded_instantiate_reply = Vec::<u8>::with_capacity(data.encoded_len());
-        // The data must encode successfully
+        // The data must be encoded successfully
         data.encode(&mut encoded_instantiate_reply).unwrap();
 
         // Build reply message
@@ -338,7 +341,25 @@ mod tests {
         let msg = ExecuteMsg::Claim {
             amount: Uint128::new(0),
         };
-        let _res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+        let res = execute(deps.as_mut(), mock_env(), info, msg).unwrap();
+        let submsg = res.messages.get(0).unwrap();
+        assert_eq!(
+            submsg,
+            &SubMsg {
+                msg: CosmosMsg::Wasm(WasmMsg::Execute {
+                    contract_addr: "asset0000".to_string(),
+                    msg: to_binary(&Cw20ExecuteMsg::Transfer {
+                        recipient: "anyone".to_string(),
+                        amount: Uint128::new(0),
+                    })
+                    .unwrap(),
+                    funds: vec![],
+                }),
+                id: 0,
+                gas_limit: None,
+                reply_on: ReplyOn::Never,
+            }
+        );
 
         let res = query(deps.as_ref(), mock_env(), QueryMsg::GetClaimed {}).unwrap();
         let value: ClaimedResponse = from_binary(&res).unwrap();
