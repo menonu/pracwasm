@@ -3,3 +3,4 @@ members = [
     "contracts/faucet",
     "contracts/game",
 ]
+resolver = "2"
